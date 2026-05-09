@@ -41,3 +41,7 @@ next-env.d.ts
 
 data/*
 .gstack/
+.claude/
+
+CLAUDE.md
+.claudeignore
