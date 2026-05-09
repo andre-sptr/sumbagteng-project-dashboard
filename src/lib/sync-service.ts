@@ -8,6 +8,7 @@ import { HistoryEntry } from '@/utils/duration';
 import { parseJsonArray } from '@/utils/json';
 import { normalizeWhitespace } from '@/utils/validation';
 import { WebSocketServer } from './websocket';
+import { COL } from './sheet-columns';
 
 function normalizeStatus(value: string): string {
   return normalizeWhitespace(
@@ -57,11 +58,11 @@ export class SyncService {
         try {
           if (row.length < 16) continue;
 
-          const region = (row[6] ?? '').toString().trim();
+          const region = (row[COL.REGION_FMC] ?? '').toString().trim();
           if (region !== 'SUMBAGTENG') continue;
 
-          const id_ihld = (row[1] ?? '').toString().trim();
-          const batch_program = (row[8] ?? '').toString().trim();
+          const id_ihld = (row[COL.ID_IHLD] ?? '').toString().trim();
+          const batch_program = (row[COL.BATCH_PROGRAM] ?? '').toString().trim();
           
           if (!id_ihld) {
             failed++;
@@ -72,8 +73,8 @@ export class SyncService {
           const existing = ProjectRepository.findByUid(uid);
           
           let history: HistoryEntry[] = [];
-          const newStatus = (row[14] ?? '').toString().trim();
-          const newSubStatus = (row[15] ?? '').toString().trim();
+          const newStatus = (row[COL.STATUS] ?? '').toString().trim();
+          const newSubStatus = (row[COL.SUB_STATUS_KONS] ?? '').toString().trim();
 
           if (existing) {
             updated++;
@@ -111,16 +112,28 @@ export class SyncService {
 
           const fullDataAtoAF = row.slice(0, 32).map(v => v === undefined || v === null ? '' : v);
 
+          const str = (idx: number) => (row[idx] ?? '').toString().trim();
+          const num = (idx: number) => { const n = Number(row[idx]); return isNaN(n) ? 0 : n; };
+
           ProjectRepository.upsert({
             uid,
             id_ihld,
             batch_program,
-            nama_lop: (row[2] ?? '').toString().trim(),
+            nama_lop: str(COL.NAMA_LOP),
             region,
             status: newStatus,
             sub_status: newSubStatus,
             full_data: JSON.stringify(fullDataAtoAF),
-            history: JSON.stringify(history)
+            history: JSON.stringify(history),
+            area: str(COL.AREA),
+            branch: str(COL.BRANCH_FMC),
+            mitra: str(COL.MITRA),
+            sto: str(COL.STO),
+            odp_planned: num(COL.ODP_PLAN),
+            port_planned: num(COL.PORT_PLAN),
+            port_realized: num(COL.REAL_JML_PORT_GOLIVE),
+            golive_target: str(COL.TARGET_GOLIVE_APRIL),
+            golive_actual: str(COL.TANGGAL_GOLIVE),
           });
           processed++;
         } catch (err) {

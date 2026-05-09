@@ -41,16 +41,16 @@ describe('Project Utilities', () => {
 
   describe('getPortCount', () => {
     it('should return real ports if available', () => {
-      const fd = new Array(30).fill(0);
-      fd[10] = 100; // Plan
-      fd[29] = 120; // Real
+      const fd = new Array(32).fill(0);
+      fd[10] = 100; // PORT PLAN (COL.PORT_PLAN)
+      fd[30] = 120; // REAL JML PORT GOLIVE (COL.REAL_JML_PORT_GOLIVE)
       expect(getPortCount(fd)).toBe(120);
     });
 
     it('should return plan ports if real is 0', () => {
-      const fd = new Array(30).fill(0);
-      fd[10] = 100; // Plan
-      fd[29] = 0;   // Real
+      const fd = new Array(32).fill(0);
+      fd[10] = 100; // PORT PLAN
+      fd[30] = 0;   // REAL JML PORT GOLIVE
       expect(getPortCount(fd)).toBe(100);
     });
   });

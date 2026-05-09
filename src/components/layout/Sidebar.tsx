@@ -13,10 +13,6 @@ import {
   ClipboardList,
   Receipt,
   BarChart3,
-  Network,
-  Server,
-  Box,
-  Users,
   Settings,
   ChevronDown,
   ChevronRight,
@@ -51,9 +47,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Monitoring',
     icon: Activity,
     items: [
-      { href: '/analytics', label: 'Analytics', icon: BarChart3 },
       { href: '/report', label: 'Report', icon: BarChart3 },
-      { href: '/audit-logs', label: 'Audit Timeline', icon: Activity },
     ],
   },
   {
@@ -67,19 +61,9 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Network Inventory',
-    icon: Network,
-    items: [
-      { href: '/topology', label: 'Topology', icon: Network },
-      { href: '/olt', label: 'OLT Inventory', icon: Server },
-      { href: '/odc', label: 'ODC Inventory', icon: Box },
-    ],
-  },
-  {
     label: 'Administration',
     icon: Settings,
     items: [
-      { href: '/vendors', label: 'Vendor Management', icon: Users },
       { href: '/settings/sync', label: 'Settings', icon: Settings },
     ],
   },

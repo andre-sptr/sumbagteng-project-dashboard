@@ -40,6 +40,16 @@ export interface Project {
   full_data: string;
   last_changed_at: string;
   history: string;
+  // Normalized columns populated by sync-service (migration 7)
+  area: string;
+  branch: string;
+  mitra: string;
+  sto: string;
+  odp_planned: number;
+  port_planned: number;
+  port_realized: number;
+  golive_target: string | null;
+  golive_actual: string | null;
 }
 
 export interface SyncLog {

@@ -3,7 +3,8 @@
 
 import React, { useMemo, useState } from 'react';
 import { Project } from '@/lib/db';
-import { parseExcelDate, getFullDataArray } from '@/utils/project';
+import { parseExcelDate } from '@/utils/project';
+import { AREA_BRANCH_MAP } from '@/lib/constants';
 import dynamic from 'next/dynamic';
 import { ReportFilters, Granularity } from './ReportFilters';
 import { ReportKpiGrid } from './ReportKpiGrid';
@@ -30,11 +31,6 @@ interface TrendEntry {
   timestamp: number;
 }
 
-const areaBranchMap: Record<string, string[]> = {
-  'RIDAR': ['DUMAI', 'PEKANBARU'],
-  'RIKEP': ['BATAM'],
-  'SUMBAR': ['BUKIT TINGGI', 'PADANG']
-};
 
 export default function ReportClient({ initialProjects }: Props) {
   const [granularity, setGranularity] = useState<Granularity>('monthly');
@@ -48,9 +44,8 @@ export default function ReportClient({ initialProjects }: Props) {
 
   const stats = useMemo(() => {
     const projects = initialProjects.filter(p => {
-      const fd = getFullDataArray(p);
-      const matchesArea = !areaFilter || fd[4] === areaFilter;
-      const matchesBranch = !branchFilter || fd[7] === branchFilter;
+      const matchesArea = !areaFilter || p.area === areaFilter;
+      const matchesBranch = !branchFilter || p.branch === branchFilter;
       return matchesArea && matchesBranch;
     });
 
@@ -64,16 +59,13 @@ export default function ReportClient({ initialProjects }: Props) {
     const branchMap = new Map<string, { name: string; planned: number; actual: number }>();
 
     projects.forEach(p => {
-      const fd = getFullDataArray(p);
+      const planPort = p.port_planned || 0;
+      const realPort = p.port_realized || 0;
+      const goliveDate = parseExcelDate(p.golive_actual);
 
-      const planPort = Number(fd[10]) || 0;
-      const realPort = Number(fd[30]) || 0;
-      const goliveDate = parseExcelDate(fd[31]);
+      let targetDate = parseExcelDate(p.golive_target);
 
-      let targetDate = parseExcelDate(fd[19]);
-      if (!targetDate) targetDate = parseExcelDate(fd[18]);
-
-      const branch = String(fd[7] || 'UNKNOWN').toUpperCase();
+      const branch = (p.branch || 'UNKNOWN').toUpperCase();
 
       totalPlannedPorts += planPort;
       totalRealizedPorts += realPort;
@@ -169,7 +161,7 @@ export default function ReportClient({ initialProjects }: Props) {
         setAreaFilter={handleAreaFilterChange}
         branchFilter={branchFilter}
         setBranchFilter={setBranchFilter}
-        areaBranchMap={areaBranchMap}
+        areaBranchMap={AREA_BRANCH_MAP}
       />
 
       <ReportKpiGrid stats={stats} />

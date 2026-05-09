@@ -33,12 +33,24 @@ export class ProjectRepository {
     sub_status: string;
     full_data: string;
     history: string;
+    area: string;
+    branch: string;
+    mitra: string;
+    sto: string;
+    odp_planned: number;
+    port_planned: number;
+    port_realized: number;
+    golive_target: string;
+    golive_actual: string;
   }) {
     const stmt = db.prepare(`
       INSERT INTO projects (
-        uid, id_ihld, batch_program, nama_lop, region, status, sub_status, full_data, last_changed_at, history
+        uid, id_ihld, batch_program, nama_lop, region, status, sub_status,
+        full_data, last_changed_at, history,
+        area, branch, mitra, sto, odp_planned, port_planned, port_realized,
+        golive_target, golive_actual
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(uid) DO UPDATE SET
         id_ihld = excluded.id_ihld,
         batch_program = excluded.batch_program,
@@ -47,12 +59,21 @@ export class ProjectRepository {
         status = excluded.status,
         sub_status = excluded.sub_status,
         full_data = excluded.full_data,
-        last_changed_at = CASE 
-          WHEN projects.sub_status != excluded.sub_status OR projects.status != excluded.status 
-          THEN CURRENT_TIMESTAMP 
-          ELSE projects.last_changed_at 
+        last_changed_at = CASE
+          WHEN projects.sub_status != excluded.sub_status OR projects.status != excluded.status
+          THEN CURRENT_TIMESTAMP
+          ELSE projects.last_changed_at
         END,
-        history = excluded.history
+        history = excluded.history,
+        area = excluded.area,
+        branch = excluded.branch,
+        mitra = excluded.mitra,
+        sto = excluded.sto,
+        odp_planned = excluded.odp_planned,
+        port_planned = excluded.port_planned,
+        port_realized = excluded.port_realized,
+        golive_target = excluded.golive_target,
+        golive_actual = excluded.golive_actual
     `);
 
     return stmt.run(
@@ -64,7 +85,16 @@ export class ProjectRepository {
       data.status,
       data.sub_status,
       data.full_data,
-      data.history
+      data.history,
+      data.area,
+      data.branch,
+      data.mitra,
+      data.sto,
+      data.odp_planned,
+      data.port_planned,
+      data.port_realized,
+      data.golive_target,
+      data.golive_actual
     );
   }
 }

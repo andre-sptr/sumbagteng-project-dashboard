@@ -6,9 +6,9 @@ import { Project } from '@/lib/db';
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { FilterSection } from './FilterSection';
 import { ProjectRow } from './ProjectRow';
-import { getFullDataArray } from '@/utils/project';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useRouter } from 'next/navigation';
+import { AREA_BRANCH_MAP } from '@/lib/constants';
 
 interface Props {
   initialProjects: Project[];
@@ -16,11 +16,6 @@ interface Props {
 
 const ITEMS_PER_PAGE = 10;
 
-const areaBranchMap: Record<string, string[]> = {
-  'RIDAR': ['DUMAI', 'PEKANBARU'],
-  'RIKEP': ['BATAM'],
-  'SUMBAR': ['BUKIT TINGGI', 'PADANG']
-};
 
 export default function DashboardClient({ initialProjects }: Props) {
   const router = useRouter();
@@ -58,17 +53,15 @@ export default function DashboardClient({ initialProjects }: Props) {
     initialProjects.forEach(p => {
       if (p.status) statuses.add(p.status);
       if (p.sub_status) subStatuses.add(p.sub_status);
-
-      const fd = getFullDataArray(p);
-      if (fd[4]) areas.add(String(fd[4]).toUpperCase());
-      if (fd[7]) branches.add(String(fd[7]).toUpperCase());
+      if (p.area) areas.add(p.area.toUpperCase());
+      if (p.branch) branches.add(p.branch.toUpperCase());
     });
 
     const sortedAreas = Array.from(areas).sort();
 
     let availableBranches = Array.from(branches).sort();
     if (areaFilter) {
-      const mappedBranches = areaBranchMap[areaFilter.toUpperCase()];
+      const mappedBranches = AREA_BRANCH_MAP[areaFilter.toUpperCase()];
       if (mappedBranches) {
         availableBranches = availableBranches.filter(b => mappedBranches.includes(b));
       }
@@ -133,12 +126,10 @@ export default function DashboardClient({ initialProjects }: Props) {
         p.sub_status.toLowerCase().includes(lowerQuery)
       );
 
-      const fd = getFullDataArray(p);
-
       const matchesStatus = !statusFilter || p.status === statusFilter;
       const matchesSubStatus = !subStatusFilter || p.sub_status === subStatusFilter;
-      const matchesArea = !areaFilter || String(fd[4]) === areaFilter;
-      const matchesBranch = !branchFilter || String(fd[7]) === branchFilter;
+      const matchesArea = !areaFilter || p.area === areaFilter;
+      const matchesBranch = !branchFilter || p.branch === branchFilter;
 
       return matchesSearch && matchesStatus && matchesSubStatus && matchesArea && matchesBranch;
     });
