@@ -27,7 +27,9 @@
       "Bash($B console *)",
       "Bash(python3 -c \"import sys,json; print\\(json.dumps\\(json.loads\\(sys.stdin.read\\(\\)\\), indent=2\\)\\)\")",
       "Bash(curl *)",
-      "PowerShell(git *)"
+      "PowerShell(git *)",
+      "Bash(git push *)",
+      "Bash(node *)"
     ]
   }
 }
