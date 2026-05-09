@@ -71,7 +71,7 @@ interface DistributionChartsProps {
 export const DistributionCharts = ({ pieData, statusList, totalPorts, branchGoliveData }: DistributionChartsProps) => {
   return (
     <section className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-      <div className="glass-panel rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-5 shadow-sm flex flex-col min-h-87.5">
+      <div className="glass-panel rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-5 shadow-sm flex flex-col">
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp size={18} className="text-blue-600" />
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -149,7 +149,7 @@ export const DistributionCharts = ({ pieData, statusList, totalPorts, branchGoli
         )}
       </div>
 
-      <div className="glass-panel rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-5 shadow-sm flex flex-col max-h-87.5">
+      <div className="glass-panel rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-5 shadow-sm flex flex-col">
         <div className="flex items-center gap-2 mb-4 shrink-0">
           <Layers size={18} className="text-indigo-600" />
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">

@@ -79,7 +79,7 @@ export default function ReportClient({ initialProjects }: Props) {
       bData.actual += realPort;
       const normalizedStatus = (p.status || '').trim() as StatusCol;
       if (STATUS_COLS.includes(normalizedStatus)) {
-        bData.statusCounts[normalizedStatus] = (bData.statusCounts[normalizedStatus] || 0) + 1;
+        bData.statusCounts[normalizedStatus] = (bData.statusCounts[normalizedStatus] || 0) + planPort;
       }
       branchMap.set(branch, bData);
 
