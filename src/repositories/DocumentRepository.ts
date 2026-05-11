@@ -1,5 +1,6 @@
-import { db, Document } from '../lib/db';
+import { db } from '../lib/db';
 import { v4 as uuidv4 } from 'uuid';
+import type { Document } from '@/types/database';
 
 export class DocumentRepository {
   static create(data: Omit<Document, 'id' | 'upload_date' | 'version'>): Document {

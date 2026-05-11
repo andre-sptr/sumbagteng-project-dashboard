@@ -1,4 +1,5 @@
-import { db, Project } from '../lib/db';
+import { db } from '../lib/db';
+import type { Project } from '@/types/database';
 
 // Repository for Project entities
 export class ProjectRepository {

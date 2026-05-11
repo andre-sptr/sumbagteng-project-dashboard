@@ -1,17 +1,25 @@
 import * as cron from 'node-cron';
 import { SyncService } from './sync-service';
 
-export class SyncScheduler {
-  private static job: cron.ScheduledTask | null = null;
+type SyncSchedulerGlobalState = {
+  job: cron.ScheduledTask | null;
+};
 
+const syncSchedulerState = ((globalThis as typeof globalThis & {
+  __dashboardSyncScheduler?: SyncSchedulerGlobalState;
+}).__dashboardSyncScheduler ??= {
+  job: null,
+});
+
+export class SyncScheduler {
   static start() {
-    if (this.job) {
+    if (syncSchedulerState.job) {
       console.log('[SyncScheduler] Job already running');
       return;
     }
 
     // Schedule sync every hour
-    this.job = cron.schedule('0 * * * *', async () => {
+    syncSchedulerState.job = cron.schedule('0 * * * *', async () => {
       console.log('[SyncScheduler] Starting scheduled sync...');
       try {
         const result = await SyncService.syncProjects();
@@ -25,14 +33,14 @@ export class SyncScheduler {
   }
 
   static stop() {
-    if (this.job) {
-      this.job.stop();
-      this.job = null;
+    if (syncSchedulerState.job) {
+      syncSchedulerState.job.stop();
+      syncSchedulerState.job = null;
       console.log('[SyncScheduler] Job stopped');
     }
   }
 
   static isRunning() {
-    return !!this.job;
+    return !!syncSchedulerState.job;
   }
 }

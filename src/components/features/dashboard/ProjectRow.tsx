@@ -1,7 +1,7 @@
 // Expandable table row for individual project data
 import React from 'react';
 import { ChevronDown, ChevronUp, FileText, Activity, Database } from 'lucide-react';
-import { Project } from '@/lib/db';
+import type { Project } from '@/types/database';
 import { HistoryEntry, formatDuration } from '@/utils/duration';
 import { formatExcelDate, getFullDataArray } from '@/utils/project';
 import { parseJsonArray } from '@/utils/json';

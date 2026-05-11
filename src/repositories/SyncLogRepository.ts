@@ -1,5 +1,6 @@
-import { db, SyncLog } from '../lib/db';
+import { db } from '../lib/db';
 import { randomUUID } from 'crypto';
+import type { SyncLog } from '@/types/database';
 
 export class SyncLogRepository {
   static create(data: {

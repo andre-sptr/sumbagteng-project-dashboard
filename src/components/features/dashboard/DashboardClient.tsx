@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Project } from '@/lib/db';
+import type { Project } from '@/types/database';
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { FilterSection } from './FilterSection';
 import { ProjectRow } from './ProjectRow';

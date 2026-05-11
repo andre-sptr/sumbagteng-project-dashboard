@@ -1,21 +1,38 @@
 import { Server as SocketIOServer } from 'socket.io';
-import { createServer } from 'http';
+import { createServer, Server as HttpServer } from 'http';
+
+type WebSocketGlobalState = {
+  httpServer: HttpServer | null;
+  io: SocketIOServer | null;
+  port: number | null;
+};
+
+const webSocketState = ((globalThis as typeof globalThis & {
+  __dashboardWebSocket?: WebSocketGlobalState;
+}).__dashboardWebSocket ??= {
+  httpServer: null,
+  io: null,
+  port: null,
+});
 
 export class WebSocketServer {
-  private static io: SocketIOServer | null = null;
-
   static init(port: number = 3001) {
-    if (this.io) return;
+    if (webSocketState.io) {
+      if (webSocketState.port !== port) {
+        console.warn(`[WebSocket] Server already listening on port ${webSocketState.port}, requested ${port}`);
+      }
+      return;
+    }
 
     const httpServer = createServer();
-    this.io = new SocketIOServer(httpServer, {
+    const io = new SocketIOServer(httpServer, {
       cors: {
         origin: '*', // Adjust for production
         methods: ['GET', 'POST'],
       },
     });
 
-    this.io.on('connection', (socket) => {
+    io.on('connection', (socket) => {
       console.log('[WebSocket] Client connected:', socket.id);
 
       socket.on('join', (room: string) => {
@@ -28,24 +45,42 @@ export class WebSocketServer {
       });
     });
 
+    httpServer.on('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'EADDRINUSE') {
+        console.warn(`[WebSocket] Port ${port} is already in use. Reusing existing external server if available.`);
+        webSocketState.io = null;
+        webSocketState.httpServer = null;
+        webSocketState.port = null;
+        io.close();
+        return;
+      }
+
+      throw error;
+    });
+
+    webSocketState.io = io;
+    webSocketState.httpServer = httpServer;
+    webSocketState.port = port;
+
     httpServer.listen(port, () => {
       console.log(`[WebSocket] Server listening on port ${port}`);
     });
   }
 
   static getInstance(): SocketIOServer {
-    if (!this.io) {
+    if (!webSocketState.io) {
       this.init();
     }
-    return this.io!;
+    return webSocketState.io!;
   }
 
   static emit(event: string, data: unknown, room?: string) {
-    if (!this.io) return;
+    const io = webSocketState.io;
+    if (!io) return;
     if (room) {
-      this.io.to(room).emit(event, data);
+      io.to(room).emit(event, data);
     } else {
-      this.io.emit(event, data);
+      io.emit(event, data);
     }
   }
 }

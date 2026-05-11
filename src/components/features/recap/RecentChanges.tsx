@@ -1,7 +1,7 @@
 // Feed of recent project updates or log entries
 import React from 'react';
 import { Clock } from 'lucide-react';
-import { Project } from '@/lib/db';
+import type { Project } from '@/types/database';
 import { calculateCurrentDuration } from '@/utils/duration';
 
 interface RecentChangesProps {

@@ -1,155 +1,39 @@
 // Summary cards for project status counts
 'use client';
 
-import { useMemo } from 'react';
-import { Project } from '@/lib/db';
 import {
   Briefcase,
   CheckCircle2,
   Loader2,
   XCircle,
 } from 'lucide-react';
-import {
-  classifyStatus,
-  getPortCount,
-  getFullDataArray,
-  formatExcelDateShort,
-  isGoliveTimelineStatus
-} from '@/utils/project';
 import dynamic from 'next/dynamic';
 import { KpiCard } from '@/components/features/recap/KpiCard';
 import { RecentChanges } from '@/components/features/recap/RecentChanges';
+import type { DashboardStats } from '@/types/dashboard';
 
 // Dynamically import heavy chart components
 const DistributionCharts = dynamic(() => import('@/components/features/recap/DistributionCharts').then(mod => mod.DistributionCharts), {
-  loading: () => <div className="h-87.5 w-full animate-pulse bg-gray-100 dark:bg-gray-800 rounded-xl" />
+  loading: () => <div className="h-87.5 w-full animate-pulse bg-gray-100 dark:bg-gray-800 rounded-xl" />,
+  ssr: false,
 });
 
 const TimelineChart = dynamic(() => import('@/components/features/recap/TimelineChart').then(mod => mod.TimelineChart), {
-  loading: () => <div className="h-75 w-full animate-pulse bg-gray-100 dark:bg-gray-800 rounded-xl" />
+  loading: () => <div className="h-75 w-full animate-pulse bg-gray-100 dark:bg-gray-800 rounded-xl" />,
+  ssr: false,
 });
 
 interface Props {
-  projects: Project[];
+  stats: DashboardStats;
 }
 
-export default function DashboardRecap({ projects }: Props) {
-  const stats = useMemo(() => {
-    let totalPorts = 0;
-    let donePorts = 0;
-    let progressPorts = 0;
-    let cancelledPorts = 0;
-    let otherPorts = 0;
-
-    const statusMap = new Map<string, number>();
-    const goliveMonthMap = new Map<string, number>();
-    let totalGolivePorts = 0;
-
-    for (const p of projects) {
-      const fd = getFullDataArray(p);
-      const ports = getPortCount(fd);
-      totalPorts += ports;
-
-      const bucket = classifyStatus(p.status);
-      if (bucket === 'done') donePorts += ports;
-      else if (bucket === 'progress') progressPorts += ports;
-      else if (bucket === 'cancelled') cancelledPorts += ports;
-      else otherPorts += ports;
-
-      const st = p.status || '-';
-      statusMap.set(st, (statusMap.get(st) || 0) + ports);
-
-      const goliveStr = formatExcelDateShort(fd[31]);
-      if (goliveStr && isGoliveTimelineStatus(p.status)) {
-        totalGolivePorts += ports;
-        goliveMonthMap.set(goliveStr, (goliveMonthMap.get(goliveStr) || 0) + ports);
-      }
-    }
-
-    const chronologicalGolive: { name: string; count: number }[] = [];
-
-    if (goliveMonthMap.size > 0) {
-      // Build date range from earliest to latest golive month in the data
-      const parsedMonths = Array.from(goliveMonthMap.keys()).map(label => {
-        const parts = label.split(' ');
-        const monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des',
-                            'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        const mIdx = monthNames.findIndex(m => m.toLowerCase() === parts[0].toLowerCase());
-        return { label, year: parseInt(parts[1]), month: mIdx % 12 };
-      }).filter(m => !isNaN(m.year) && m.year >= 1900 && m.year <= 2100 && m.month >= 0);
-
-      if (parsedMonths.length > 0) {
-        const minYear = Math.min(...parsedMonths.map(m => m.year));
-        const maxYear = Math.max(...parsedMonths.map(m => m.year));
-        const minMonth = Math.min(...parsedMonths.filter(m => m.year === minYear).map(m => m.month));
-        const maxMonth = Math.max(...parsedMonths.filter(m => m.year === maxYear).map(m => m.month));
-
-        for (let y = minYear; y <= maxYear; y++) {
-          const startM = y === minYear ? minMonth : 0;
-          const endM = y === maxYear ? maxMonth : 11;
-          for (let m = startM; m <= endM; m++) {
-            const d = new Date(y, m, 1);
-            const label = d.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
-            chronologicalGolive.push({ name: label, count: goliveMonthMap.get(label) || 0 });
-          }
-        }
-      }
-    }
-
-    const branchGoliveMap = new Map<string, { done: number; total: number }>();
-    for (const p of projects) {
-      const fd = getFullDataArray(p);
-      const ports = getPortCount(fd);
-      const br = (p.branch || 'UNKNOWN').toUpperCase();
-      const entry = branchGoliveMap.get(br) || { done: 0, total: 0 };
-      entry.total += ports;
-      if (classifyStatus(p.status) === 'done') entry.done += ports;
-      branchGoliveMap.set(br, entry);
-    }
-    const branchGoliveData = Array.from(branchGoliveMap.entries())
-      .map(([name, v]) => ({
-        name,
-        done: v.done,
-        achiev: v.total > 0 ? Math.round((v.done / v.total) * 100) : 0,
-      }))
-      .sort((a, b) => b.achiev - a.achiev);
-
-    const recent = [...projects]
-      .sort(
-        (a, b) =>
-          new Date(b.last_changed_at).getTime() - new Date(a.last_changed_at).getTime(),
-      )
-      .slice(0, 5);
-
-    const pieData = [
-      { name: 'Done', value: donePorts, color: '#10b981' },
-      { name: 'Progress', value: progressPorts, color: '#3b82f6' },
-      { name: 'Cancelled', value: cancelledPorts, color: '#ef4444' },
-      { name: 'Other', value: otherPorts, color: '#f59e0b' },
-    ].filter(d => d.value > 0);
-
-    return {
-      total: projects.length,
-      totalPorts,
-      donePorts,
-      progressPorts,
-      cancelledPorts,
-      otherPorts,
-      statusList: Array.from(statusMap.entries())
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => {
-          const aNum = parseFloat(a.name) || 0;
-          const bNum = parseFloat(b.name) || 0;
-          return bNum - aNum;
-        }),
-      totalGolivePorts,
-      goliveMonthList: chronologicalGolive,
-      branchGoliveData,
-      recent,
-      pieData,
-    };
-  }, [projects]);
-
+export default function DashboardRecap({ stats }: Props) {
+  const pieData = [
+    { name: 'Done', value: stats.donePorts, color: '#10b981' },
+    { name: 'Progress', value: stats.progressPorts, color: '#3b82f6' },
+    { name: 'Cancelled', value: stats.cancelledPorts, color: '#ef4444' },
+    { name: 'Other', value: stats.otherPorts, color: '#f59e0b' },
+  ].filter(d => d.value > 0);
   const { totalPorts } = stats;
 
   return (
@@ -187,7 +71,7 @@ export default function DashboardRecap({ projects }: Props) {
 
       <div className="animate-in stagger-2">
         <DistributionCharts
-          pieData={stats.pieData}
+          pieData={pieData}
           statusList={stats.statusList}
           totalPorts={totalPorts}
           branchGoliveData={stats.branchGoliveData}

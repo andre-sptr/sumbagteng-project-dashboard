@@ -1,4 +1,4 @@
-import { Project } from '@/lib/db';
+import type { Project } from '@/types/database';
 import { parseJsonArray } from './json';
 import { 
   parseExcelDate, 

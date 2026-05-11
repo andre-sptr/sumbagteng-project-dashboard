@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Project } from '@/lib/db';
+import type { Project } from '@/types/database';
 import { parseExcelDate } from '@/utils/project';
 import { AREA_BRANCH_MAP } from '@/lib/constants';
 import dynamic from 'next/dynamic';

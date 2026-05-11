@@ -4,9 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:light": "next dev",
+    "dev:services": "set ENABLE_BACKGROUND_SERVICES=true&& set NEXT_PUBLIC_ENABLE_WEBSOCKET=true&& next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "typecheck:diagnostics": "tsc --noEmit --extendedDiagnostics --pretty false",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage"

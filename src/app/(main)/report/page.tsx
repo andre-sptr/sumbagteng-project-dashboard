@@ -1,6 +1,6 @@
 // Detailed KPI analytics and reporting interface
 import { ProjectRepository } from '@/repositories/ProjectRepository';
-import { Project } from '@/lib/db';
+import type { Project } from '@/types/database';
 import ReportClient from '@/components/features/report/ReportClient';
 
 export const dynamic = 'force-dynamic';

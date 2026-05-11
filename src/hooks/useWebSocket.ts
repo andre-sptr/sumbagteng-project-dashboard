@@ -11,6 +11,10 @@ export function useWebSocket() {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_ENABLE_WEBSOCKET !== 'true') {
+      return;
+    }
+
     // Port 3001 as defined in WebSocketServer.init
     const socketInstance = io('http://localhost:3001', {
       autoConnect: true,
