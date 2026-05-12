@@ -31,8 +31,6 @@ export interface TrendData {
 
 interface ProjectAnalyticsRow {
   status: string;
-  boq_value: number | null;
-  completion_percentage: number | null;
   golive_target: string | null;
   golive_actual: string | null;
 }
@@ -47,14 +45,14 @@ export class AnalyticsService {
    * Get high-level KPI overview
    */
   static async getKPIs(): Promise<KPIStats> {
-    const projects = db.prepare('SELECT status, boq_value, completion_percentage, golive_target, golive_actual FROM projects').all() as ProjectAnalyticsRow[];
-    
+    const projects = db.prepare('SELECT status, golive_target, golive_actual FROM projects').all() as ProjectAnalyticsRow[];
+
     const totalProjects = projects.length;
     const completedProjects = projects.filter(p => p.status === 'DONE' || p.status === 'GOLIVE').length;
-    const totalBoqValue = projects.reduce((sum, p) => sum + (p.boq_value || 0), 0);
-    const avgCompletionPercentage = totalProjects > 0 
-      ? projects.reduce((sum, p) => sum + (p.completion_percentage || 0), 0) / totalProjects 
-      : 0;
+    const { total: totalBoqValue } = db.prepare(
+      'SELECT COALESCE(SUM(total), 0) AS total FROM boq_ut_items'
+    ).get() as { total: number };
+    const avgCompletionPercentage = 0;
 
     // SLA Compliance: Actual <= Target for completed projects
     const completedWithDates = projects.filter(
@@ -72,8 +70,7 @@ export class AnalyticsService {
     const atRiskProjects = projects.filter(p => {
       if (p.status === 'DONE' || p.status === 'GOLIVE') return false;
       if (!p.golive_target) return false;
-      const target = new Date(p.golive_target);
-      return target < nearFuture && (p.completion_percentage || 0) < 90;
+      return new Date(p.golive_target) < nearFuture;
     }).length;
 
     const onTrackProjects = totalProjects - atRiskProjects - completedProjects;

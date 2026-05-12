@@ -527,6 +527,54 @@ const migrations: Migration[] = [
       `);
     }
   }
+  {
+    id: 13,
+    name: 'drop_unused_projects_columns',
+    run: (db) => {
+      const projectCols = (db.pragma('table_info(projects)') as { name: string }[]).map(c => c.name);
+
+      // Drop indexes before columns that have them
+      const indexedCols: Record<string, string> = {
+        vendor_id:  'idx_projects_vendor',
+        olt_id:     'idx_projects_olt',
+        odc_id:     'idx_projects_odc',
+        priority:   'idx_projects_priority',
+      };
+      for (const [col, idx] of Object.entries(indexedCols)) {
+        if (projectCols.includes(col)) {
+          db.exec(`DROP INDEX IF EXISTS ${idx}`);
+          db.exec(`ALTER TABLE projects DROP COLUMN ${col}`);
+        }
+      }
+
+      // Drop columns with no index
+      const simpleCols = [
+        'witel', 'datel', 'boq_value', 'boq_currency',
+        'project_manager', 'technical_lead', 'risk_level',
+        'completion_percentage', 'odp_realized',
+      ];
+      for (const col of simpleCols) {
+        if (projectCols.includes(col)) {
+          db.exec(`ALTER TABLE projects DROP COLUMN ${col}`);
+        }
+      }
+
+      // Drop notification_preferences — completely unused
+      db.exec(`DROP TABLE IF EXISTS notification_preferences`);
+    }
+  },
+  {
+    id: 14,
+    name: 'drop_unused_boq_columns',
+    run: (db) => {
+      const boqCols = (db.pragma('table_info(boq)') as { name: string }[]).map(c => c.name);
+      for (const col of ['batch_program', 'region']) {
+        if (boqCols.includes(col)) {
+          db.exec(`ALTER TABLE boq DROP COLUMN ${col}`);
+        }
+      }
+    }
+  },
 ];
 
 export function runMigrations(db: Database) {

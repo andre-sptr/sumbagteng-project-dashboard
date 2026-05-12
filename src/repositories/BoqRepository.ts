@@ -6,9 +6,7 @@ export interface Boq {
   nama_lop: string;
   id_ihld: string;
   sto: string;
-  batch_program: string;
   project_name: string;
-  region: string;
   full_data: string;
   project_uid: string | null;
   created_at: string;
@@ -46,21 +44,18 @@ export class BoqRepository {
   static upsert(data: Omit<Boq, 'created_at' | 'updated_at'>) {
     return db.prepare(`
       INSERT INTO boq (
-        id, nama_lop, id_ihld, sto, batch_program, project_name, region, full_data, created_at, updated_at
+        id, nama_lop, id_ihld, sto, project_name, full_data, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       ON CONFLICT(id) DO UPDATE SET
         nama_lop = excluded.nama_lop,
         id_ihld = excluded.id_ihld,
         sto = excluded.sto,
-        batch_program = excluded.batch_program,
         project_name = excluded.project_name,
-        region = excluded.region,
         full_data = excluded.full_data,
         updated_at = CURRENT_TIMESTAMP
     `).run(
-      data.id, data.nama_lop, data.id_ihld, data.sto,
-      data.batch_program, data.project_name, data.region, data.full_data
+      data.id, data.nama_lop, data.id_ihld, data.sto, data.project_name, data.full_data
     );
   }
 
@@ -81,9 +76,8 @@ export class BoqRepository {
       } else {
         boqId = `boq_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         db.prepare(`
-          INSERT INTO boq (id, nama_lop, id_ihld, sto, batch_program, project_name, region,
-                           full_data, project_uid, created_at, updated_at)
-          VALUES (?, ?, ?, '', '', ?, 'SUMBAGTENG', '', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          INSERT INTO boq (id, nama_lop, id_ihld, sto, project_name, full_data, project_uid, created_at, updated_at)
+          VALUES (?, ?, ?, '', ?, '', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         `).run(boqId, data.nama_lop, data.id_ihld, data.nama_lop, data.project_uid);
       }
 
