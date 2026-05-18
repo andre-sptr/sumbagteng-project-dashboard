@@ -41,6 +41,15 @@ function SlotPanel({
   const slotByIndex = new Map<number, SlotData>(olt.slots.map(s => [s.slot, s]));
   const maxPortGlobal = olt.slots.reduce((max, s) => Math.max(max, s.maxPort), 15);
   const numSlots = olt.maxSlot + 1;
+  const getPortButtonClass = (portEntry: NonNullable<SlotData['ports'][number]>, isExpanded: boolean) => {
+    if (isExpanded) {
+      return 'bg-blue-500 ring-2 ring-blue-400 ring-offset-1 dark:ring-offset-gray-900 shadow-md';
+    }
+    if (portEntry.source === 'allocation') {
+      return 'bg-amber-500 hover:bg-amber-400 hover:scale-110';
+    }
+    return 'bg-emerald-500 hover:bg-emerald-400 hover:scale-110';
+  };
 
   return (
     <div className="mt-3 ml-4">
@@ -83,12 +92,12 @@ function SlotPanel({
                             <button
                               className={`w-5 h-5 rounded-sm block mx-auto transition-all
                                 ${portEntry
-                                  ? isExpanded
-                                    ? 'bg-blue-500 ring-2 ring-blue-400 ring-offset-1 dark:ring-offset-gray-900 shadow-md'
-                                    : 'bg-emerald-500 hover:bg-emerald-400 hover:scale-110'
+                                  ? getPortButtonClass(portEntry, isExpanded)
                                   : 'bg-gray-100 dark:bg-gray-700/50 cursor-default'
                                 }`}
-                              title={portEntry ? `${portEntry.port_str} → ${portEntry.odc_name}` : `S${slotIdx} P${portIdx}: empty`}
+                              title={portEntry
+                                ? `${portEntry.port_str} -> ${portEntry.odc_name}${portEntry.source === 'allocation' ? ` (${portEntry.nama_lop || 'AANWIJZING'})` : ''}`
+                                : `S${slotIdx} P${portIdx}: empty`}
                               onClick={() => portEntry && toggleNode(`PORT-${portEntry.port_str}`)}
                               disabled={!portEntry}
                             />
@@ -103,9 +112,12 @@ function SlotPanel({
                             {expandedInRow.map(p => (
                               <div key={p.port_str} className="flex items-center gap-1.5 text-[9px]">
                                 <span className="font-bold text-blue-600 dark:text-blue-400">{p.port_str}</span>
-                                <span className="text-blue-300 dark:text-blue-700">→</span>
+                                <span className="text-blue-300 dark:text-blue-700">-&gt;</span>
                                 <Box size={9} className="text-blue-400 shrink-0" />
                                 <span className="font-medium text-gray-700 dark:text-gray-200">{p.odc_name}</span>
+                                {p.source === 'allocation' && (
+                                  <span className="text-amber-600 dark:text-amber-400">AANWIJZING {p.id_ihld}</span>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -156,15 +168,16 @@ export default function NetworkTopology({ initialData }: { initialData: Topology
     return result;
   }, [data, searchQuery]);
 
-  useEffect(() => {
-    if (!searchQuery.trim() || !filteredData) return;
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (!value.trim() || !data) return;
     const toExpand: Record<string, boolean> = { ROOT: true };
-    for (const [area, stoMap] of Object.entries(filteredData)) {
+    for (const [area, stoMap] of Object.entries(data)) {
       toExpand[`AREA-${area}`] = true;
       for (const sto of Object.keys(stoMap)) toExpand[`STO-${sto}`] = true;
     }
     setExpandedNodes(prev => ({ ...prev, ...toExpand }));
-  }, [searchQuery, filteredData]);
+  };
 
   useEffect(() => {
     if (!initialData) {
@@ -215,7 +228,7 @@ export default function NetworkTopology({ initialData }: { initialData: Topology
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Cari OLT, ODC, STO, Port..."
               className="bg-transparent border-none text-xs focus:ring-0 outline-none text-gray-700 dark:text-gray-300 placeholder-gray-400 w-44"
             />
@@ -291,7 +304,7 @@ export default function NetworkTopology({ initialData }: { initialData: Topology
               {searchQuery && Object.keys(filteredData || {}).length === 0 && (
                 <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-3">
                   <Search size={32} className="opacity-30" />
-                  <p className="text-sm font-medium">Tidak ada hasil untuk <span className="font-bold text-gray-600 dark:text-gray-300">"{searchQuery}"</span></p>
+                  <p className="text-sm font-medium">Tidak ada hasil untuk <span className="font-bold text-gray-600 dark:text-gray-300">&quot;{searchQuery}&quot;</span></p>
                   <button onClick={() => setSearchQuery('')} className="text-xs text-blue-500 hover:underline">Hapus pencarian</button>
                 </div>
               )}
@@ -385,7 +398,11 @@ export default function NetworkTopology({ initialData }: { initialData: Topology
       <div className="flex items-center justify-center gap-8 py-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-800">
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-emerald-500" />
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Occupied Port</span>
+          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Master Port</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-amber-500" />
+          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">AANWIJZING Allocation</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-blue-500" />

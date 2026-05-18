@@ -584,6 +584,46 @@ const migrations: Migration[] = [
       }
     }
   },
+  {
+    id: 16,
+    name: 'aanwijzing_topology_allocations',
+    run: (db) => {
+      const aanwijzingCols = (db.pragma('table_info(aanwijzing)') as { name: string }[]).map(c => c.name);
+      const columnsToAdd = [
+        { name: 'area', type: 'TEXT DEFAULT ""' },
+        { name: 'sto', type: 'TEXT DEFAULT ""' },
+        { name: 'odc_name', type: 'TEXT DEFAULT ""' },
+      ];
+
+      for (const col of columnsToAdd) {
+        if (!aanwijzingCols.includes(col.name)) {
+          db.exec(`ALTER TABLE aanwijzing ADD COLUMN ${col.name} ${col.type}`);
+        }
+      }
+
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS topology_allocations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          aanwijzing_id TEXT NOT NULL REFERENCES aanwijzing(id) ON DELETE CASCADE,
+          nama_lop TEXT NOT NULL,
+          id_ihld TEXT NOT NULL,
+          area TEXT NOT NULL,
+          sto TEXT NOT NULL,
+          olt_name TEXT NOT NULL,
+          odc_name TEXT NOT NULL,
+          frame INTEGER NOT NULL,
+          slot INTEGER NOT NULL,
+          port INTEGER NOT NULL,
+          port_str TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(olt_name, frame, slot, port)
+        );
+        CREATE INDEX IF NOT EXISTS idx_topology_allocations_aanwijzing ON topology_allocations(aanwijzing_id);
+        CREATE INDEX IF NOT EXISTS idx_topology_allocations_location ON topology_allocations(area, sto, olt_name);
+      `);
+    }
+  },
 ];
 
 export function runMigrations(db: Database) {

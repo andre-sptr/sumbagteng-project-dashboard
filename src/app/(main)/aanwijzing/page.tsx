@@ -1,13 +1,22 @@
 // Page for managing Aanwijzing (technical briefing) data
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronDown, Save, Trash2, Edit3, Plus, X, FileText, ChevronLeft, ChevronRight, Upload, Loader2, Eye } from 'lucide-react';
 import BoqPreviewTable from '@/components/features/boq/BoqPreviewTable';
+import { detectOdcName } from '@/lib/topology-allocation';
 
 interface ProjectOption {
   nama_lop: string;
   id_ihld: string;
+  area: string;
+  sto: string;
+}
+
+interface TopologyOltOption {
+  area: string;
+  sto: string;
+  olt_name: string;
 }
 
 interface AanwijzingData {
@@ -15,10 +24,13 @@ interface AanwijzingData {
   nama_lop: string;
   id_ihld: string;
   tematik: string;
+  area: string;
+  sto: string;
   tanggal_aanwijzing: string;
   catatan: string;
   status_after_aanwijzing: string;
   gpon: string;
+  odc_name: string;
   frame: number;
   slot_awal: number;
   slot_akhir: number;
@@ -36,6 +48,8 @@ const ITEMS_PER_PAGE = 5;
 
 export default function AanwijzingPage() {
   const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [topologyOlts, setTopologyOlts] = useState<TopologyOltOption[]>([]);
+  const [odcNames, setOdcNames] = useState<string[]>([]);
   const [aanwijzingList, setAanwijzingList] = useState<AanwijzingData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -46,15 +60,19 @@ export default function AanwijzingPage() {
   const [boqRows, setBoqRows] = useState<unknown[]>([]);
   const [isUploadingBoq, setIsUploadingBoq] = useState(false);
   const [showBoqPreview, setShowBoqPreview] = useState(false);
+  const [pendingOverwrite, setPendingOverwrite] = useState(false);
 
   const [formData, setFormData] = useState({
     nama_lop: '',
     id_ihld: '',
     tematik: '',
+    area: '',
+    sto: '',
     tanggal_aanwijzing: '',
     catatan: '',
     status_after_aanwijzing: '',
     gpon: '',
+    odc_name: '',
     frame: '',
     slot_awal: '',
     slot_akhir: '',
@@ -72,12 +90,40 @@ export default function AanwijzingPage() {
     p.id_ihld.toLowerCase().includes(searchLop.toLowerCase())
   );
 
+  const areaOptions = useMemo(
+    () => Array.from(new Set(topologyOlts.map(o => o.area).filter(Boolean))).sort(),
+    [topologyOlts]
+  );
+
+  const stoOptions = useMemo(
+    () => Array.from(new Set(topologyOlts
+      .filter(o => !formData.area || o.area === formData.area)
+      .map(o => o.sto)
+      .filter(Boolean))).sort(),
+    [formData.area, topologyOlts]
+  );
+
+  const gponOptions = useMemo(
+    () => topologyOlts
+      .filter(o => (!formData.area || o.area === formData.area) && (!formData.sto || o.sto === formData.sto))
+      .map(o => o.olt_name)
+      .filter((name, index, arr) => name && arr.indexOf(name) === index)
+      .sort(),
+    [formData.area, formData.sto, topologyOlts]
+  );
+
   const handleSelectLop = (project: ProjectOption) => {
+    const detectedOdc = detectOdcName(project.nama_lop, odcNames);
     setFormData({
       ...formData,
       nama_lop: project.nama_lop,
       id_ihld: project.id_ihld,
+      area: project.area || formData.area,
+      sto: project.sto || formData.sto,
+      gpon: '',
+      odc_name: detectedOdc,
     });
+    setPendingOverwrite(false);
     setSearchLop(project.nama_lop);
     setShowDropdown(false);
   };
@@ -94,6 +140,8 @@ export default function AanwijzingPage() {
       if (response.success) {
         setProjects(response.data.projects || []);
         setAanwijzingList(response.data.aanwijzing || []);
+        setTopologyOlts(response.data.topology?.olts || []);
+        setOdcNames(response.data.topology?.odcNames || []);
       } else {
         showNotification('error', response.message || 'Gagal mengambil data');
       }
@@ -145,8 +193,7 @@ export default function AanwijzingPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitAanwijzing = async (allowOverwrite: boolean) => {
     setIsSubmitting(true);
 
     try {
@@ -160,6 +207,7 @@ export default function AanwijzingPage() {
           slot_akhir: Number(formData.slot_akhir) || 0,
           port_awal: Number(formData.port_awal) || 0,
           port_akhir: Number(formData.port_akhir) || 0,
+          allow_overwrite: allowOverwrite,
           boq_data: boqRows.length > 0 ? boqRows : null,
           id: editingId ?? undefined,
         }),
@@ -169,12 +217,19 @@ export default function AanwijzingPage() {
 
       if (response.success) {
         showNotification('success', response.message || (editingId ? 'Data berhasil diperbarui' : 'Data berhasil disimpan'));
+        setPendingOverwrite(false);
         resetForm();
         fetchData();
         setShowForm(false);
         setEditingId(null);
       } else {
-        showNotification('error', response.message || 'Gagal menyimpan data');
+        if (res.status === 409 && response.details?.code === 'TOPOLOGY_ALLOCATION_CONFLICT') {
+          setPendingOverwrite(true);
+          showNotification('error', response.error || 'Port sudah dialokasikan. Klik Overwrite jika ingin mengganti alokasi AANWIJZING lain.');
+        } else {
+          setPendingOverwrite(false);
+          showNotification('error', response.error || response.message || 'Gagal menyimpan data');
+        }
       }
     } catch (error) {
       console.error('Error saving:', error);
@@ -184,15 +239,23 @@ export default function AanwijzingPage() {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitAanwijzing(false);
+  };
+
   const handleEdit = (item: AanwijzingData) => {
     setFormData({
       nama_lop: item.nama_lop,
       id_ihld: item.id_ihld,
       tematik: item.tematik || '',
+      area: item.area || '',
+      sto: item.sto || '',
       tanggal_aanwijzing: item.tanggal_aanwijzing || '',
       catatan: item.catatan || '',
       status_after_aanwijzing: item.status_after_aanwijzing || '',
       gpon: item.gpon || '',
+      odc_name: item.odc_name || '',
       frame: String(item.frame || ''),
       slot_awal: String(item.slot_awal || ''),
       slot_akhir: String(item.slot_akhir || ''),
@@ -201,6 +264,7 @@ export default function AanwijzingPage() {
       wa_spang: item.wa_spang || '',
       ut: item.ut || '',
     });
+    setPendingOverwrite(false);
     setSearchLop(item.nama_lop);
     setEditingId(item.id);
     if (item.boq_data && item.boq_data.full_data) {
@@ -239,10 +303,13 @@ export default function AanwijzingPage() {
       nama_lop: '',
       id_ihld: '',
       tematik: '',
+      area: '',
+      sto: '',
       tanggal_aanwijzing: '',
       catatan: '',
       status_after_aanwijzing: '',
       gpon: '',
+      odc_name: '',
       frame: '',
       slot_awal: '',
       slot_akhir: '',
@@ -254,6 +321,7 @@ export default function AanwijzingPage() {
     setBoqRows([]);
     setSearchLop('');
     setShowDropdown(false);
+    setPendingOverwrite(false);
     setEditingId(null);
   };
 
@@ -333,7 +401,8 @@ export default function AanwijzingPage() {
                       setSearchLop(e.target.value);
                       setShowDropdown(true);
                       if (!e.target.value) {
-                        setFormData({ ...formData, nama_lop: '', id_ihld: '' });
+                        setFormData({ ...formData, nama_lop: '', id_ihld: '', odc_name: '' });
+                        setPendingOverwrite(false);
                       }
                     }}
                     onFocus={() => setShowDropdown(true)}
@@ -356,7 +425,9 @@ export default function AanwijzingPage() {
                         className="w-full px-3 py-2.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
                       >
                         <div className="font-medium text-gray-900 dark:text-white">{p.nama_lop}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">{p.id_ihld}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {p.id_ihld}{p.area || p.sto ? ` - ${p.area || '-'} / ${p.sto || '-'}` : ''}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -402,7 +473,7 @@ export default function AanwijzingPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className={labelClass}>Status After Aanwijzing</label>
                 <input
@@ -414,14 +485,73 @@ export default function AanwijzingPage() {
                 />
               </div>
               <div>
+                <label className={labelClass}>Area</label>
+                <select
+                  value={formData.area}
+                  onChange={(e) => {
+                    setFormData({ ...formData, area: e.target.value, sto: '', gpon: '' });
+                    setPendingOverwrite(false);
+                  }}
+                  className={inputClass}
+                >
+                  <option value="">Pilih Area</option>
+                  {areaOptions.map(area => (
+                    <option key={area} value={area}>{area}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>STO</label>
+                <select
+                  value={formData.sto}
+                  onChange={(e) => {
+                    setFormData({ ...formData, sto: e.target.value, gpon: '' });
+                    setPendingOverwrite(false);
+                  }}
+                  className={inputClass}
+                  disabled={!formData.area}
+                >
+                  <option value="">Pilih STO</option>
+                  {stoOptions.map(sto => (
+                    <option key={sto} value={sto}>{sto}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
                 <label className={labelClass}>GPON</label>
+                <select
+                  value={formData.gpon}
+                  onChange={(e) => {
+                    setFormData({ ...formData, gpon: e.target.value });
+                    setPendingOverwrite(false);
+                  }}
+                  className={inputClass}
+                  disabled={!formData.area || !formData.sto}
+                >
+                  <option value="">Pilih GPON</option>
+                  {gponOptions.map(gpon => (
+                    <option key={gpon} value={gpon}>{gpon}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>ODC</label>
                 <input
                   type="text"
-                  value={formData.gpon}
-                  onChange={(e) => setFormData({ ...formData, gpon: e.target.value })}
+                  value={formData.odc_name}
+                  onChange={(e) => {
+                    setFormData({ ...formData, odc_name: e.target.value });
+                    setPendingOverwrite(false);
+                  }}
                   className={inputClass}
-                  placeholder="Masukkan GPON..."
+                  placeholder="Masukkan ODC jika tidak terdeteksi"
                 />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  {formData.odc_name ? 'ODC terdeteksi dari Nama LOP dan bisa dikoreksi.' : 'Isi manual jika pola ODC tidak ditemukan.'}
+                </p>
               </div>
             </div>
 
@@ -431,7 +561,10 @@ export default function AanwijzingPage() {
                 <input
                   type="number"
                   value={formData.frame}
-                  onChange={(e) => setFormData({ ...formData, frame: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, frame: e.target.value });
+                    setPendingOverwrite(false);
+                  }}
                   className={inputClass}
                   placeholder="0"
                   min="0"
@@ -442,7 +575,10 @@ export default function AanwijzingPage() {
                 <input
                   type="number"
                   value={formData.slot_awal}
-                  onChange={(e) => setFormData({ ...formData, slot_awal: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, slot_awal: e.target.value });
+                    setPendingOverwrite(false);
+                  }}
                   className={inputClass}
                   placeholder="0"
                   min="0"
@@ -453,7 +589,10 @@ export default function AanwijzingPage() {
                 <input
                   type="number"
                   value={formData.slot_akhir}
-                  onChange={(e) => setFormData({ ...formData, slot_akhir: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, slot_akhir: e.target.value });
+                    setPendingOverwrite(false);
+                  }}
                   className={inputClass}
                   placeholder="0"
                   min="0"
@@ -477,7 +616,10 @@ export default function AanwijzingPage() {
                 <input
                   type="number"
                   value={formData.port_awal}
-                  onChange={(e) => setFormData({ ...formData, port_awal: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, port_awal: e.target.value });
+                    setPendingOverwrite(false);
+                  }}
                   className={inputClass}
                   placeholder="0"
                   min="0"
@@ -488,7 +630,10 @@ export default function AanwijzingPage() {
                 <input
                   type="number"
                   value={formData.port_akhir}
-                  onChange={(e) => setFormData({ ...formData, port_akhir: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, port_akhir: e.target.value });
+                    setPendingOverwrite(false);
+                  }}
                   className={inputClass}
                   placeholder="0"
                   min="0"
@@ -577,6 +722,16 @@ export default function AanwijzingPage() {
               >
                 Batal
               </button>
+              {pendingOverwrite && (
+                <button
+                  type="button"
+                  onClick={() => submitAanwijzing(true)}
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  Overwrite
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={isSubmitting}

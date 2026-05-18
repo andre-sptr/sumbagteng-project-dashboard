@@ -20,13 +20,13 @@ export class ProjectRepository {
   }
 
   // Get project names and IDs for select inputs
-  static getForSelect(): { nama_lop: string; id_ihld: string }[] {
+  static getForSelect(): { nama_lop: string; id_ihld: string; area: string; sto: string }[] {
     return db.prepare(`
-      SELECT DISTINCT nama_lop, id_ihld 
+      SELECT DISTINCT nama_lop, id_ihld, area, sto
       FROM projects 
       WHERE nama_lop IS NOT NULL AND nama_lop != '' 
       ORDER BY nama_lop ASC
-    `).all() as { nama_lop: string; id_ihld: string }[];
+    `).all() as { nama_lop: string; id_ihld: string; area: string; sto: string }[];
   }
 
   // Insert or update project with history tracking

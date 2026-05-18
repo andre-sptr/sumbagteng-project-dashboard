@@ -1,9 +1,14 @@
 import { OltOdcRepository } from '@/repositories/OltOdcRepository';
+import { TopologyAllocationRepository } from '@/repositories/TopologyAllocationRepository';
 
 export interface PortEntry {
   port: number;
   odc_name: string;
   port_str: string;
+  source: 'master' | 'allocation';
+  nama_lop?: string;
+  id_ihld?: string;
+  aanwijzing_id?: string;
 }
 
 export interface SlotData {
@@ -29,13 +34,27 @@ export type TopologyHierarchy = Record<string, AreaData>;
 
 export function getNetworkHierarchy(): TopologyHierarchy {
   const rows = OltOdcRepository.findAll();
+  const allocations = TopologyAllocationRepository.findAll();
   const hierarchy: TopologyHierarchy = {};
 
   type SlotInfo = { frame: string; maxPort: number; portEntries: Map<number, PortEntry> };
   const slotMaps: Record<string, Record<string, Record<string, Map<number, SlotInfo>>>> = {};
 
-  for (const row of rows) {
-    if (!row.area || !row.sto) continue;
+  const addPort = (row: {
+    area: string;
+    sto: string;
+    olt_name: string;
+    odc_name: string;
+    port_str: string;
+    frame: string;
+    slot: number;
+    port: number;
+    source: 'master' | 'allocation';
+    nama_lop?: string;
+    id_ihld?: string;
+    aanwijzing_id?: string;
+  }) => {
+    if (!row.area || !row.sto || !row.olt_name) return;
 
     if (!hierarchy[row.area]) hierarchy[row.area] = {};
     if (!hierarchy[row.area][row.sto]) hierarchy[row.area][row.sto] = {};
@@ -61,7 +80,36 @@ export function getNetworkHierarchy(): TopologyHierarchy {
     }
     const slotInfo = slotMap.get(row.slot)!;
     if (row.port > slotInfo.maxPort) slotInfo.maxPort = row.port;
-    slotInfo.portEntries.set(row.port, { port: row.port, odc_name: row.odc_name, port_str: row.port_str });
+    slotInfo.portEntries.set(row.port, {
+      port: row.port,
+      odc_name: row.odc_name,
+      port_str: row.port_str,
+      source: row.source,
+      nama_lop: row.nama_lop,
+      id_ihld: row.id_ihld,
+      aanwijzing_id: row.aanwijzing_id,
+    });
+  };
+
+  for (const row of rows) {
+    addPort({ ...row, source: 'master' });
+  }
+
+  for (const row of allocations) {
+    addPort({
+      area: row.area,
+      sto: row.sto,
+      olt_name: row.olt_name,
+      odc_name: row.odc_name,
+      port_str: row.port_str,
+      frame: String(row.frame),
+      slot: row.slot,
+      port: row.port,
+      source: 'allocation',
+      nama_lop: row.nama_lop,
+      id_ihld: row.id_ihld,
+      aanwijzing_id: row.aanwijzing_id,
+    });
   }
 
   for (const area of Object.keys(hierarchy)) {

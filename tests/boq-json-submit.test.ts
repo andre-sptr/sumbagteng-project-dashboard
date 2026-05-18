@@ -74,6 +74,89 @@ describe('BoQ JSON submit routes', () => {
     expect(JSON.parse(stored.full_data)[0].designator).toBe('OS-SM-1');
   });
 
+  it('rejects AANWIJZING topology allocation when the selected port exists in master topology', async () => {
+    const { POST } = await import('../src/app/api/aanwijzing/route');
+
+    state.db.prepare(`
+      INSERT INTO olt_odc_map (area, sto, olt_name, odc_name, port_str, frame, slot, port)
+      VALUES ('RIKEP', 'LBJ', 'OLT-LBJ-1', 'MASTER-ODC', '1/1/0', '1', 1, 0)
+    `).run();
+
+    const response = await POST(new Request('http://localhost/api/aanwijzing', {
+      method: 'POST',
+      body: JSON.stringify({
+        nama_lop: 'RKP TSEL PT3 LBJ-FAN BUGIS JUNCTION',
+        id_ihld: 'IHLD-A',
+        tanggal_aanwijzing: '2026-05-18',
+        area: 'RIKEP',
+        sto: 'LBJ',
+        gpon: 'OLT-LBJ-1',
+        odc_name: 'LBJ-FAN',
+        frame: 1,
+        slot_awal: 1,
+        slot_akhir: 1,
+        port_awal: 0,
+        port_akhir: 0,
+      }),
+    }) as never);
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.details.code).toBe('TOPOLOGY_MASTER_CONFLICT');
+    expect(
+      state.db.prepare('SELECT COUNT(*) AS count FROM aanwijzing').get()
+    ).toEqual({ count: 0 });
+  });
+
+  it('requires overwrite for conflicts with another AANWIJZING allocation and replaces it when allowed', async () => {
+    const { POST } = await import('../src/app/api/aanwijzing/route');
+
+    state.db.prepare(`
+      INSERT INTO aanwijzing (id, nama_lop, id_ihld, tanggal_aanwijzing, area, sto, odc_name)
+      VALUES ('AAN-OLD', 'OLD LOP', 'IHLD-OLD', '2026-05-17', 'RIKEP', 'LBJ', 'OLD-ODC')
+    `).run();
+    state.db.prepare(`
+      INSERT INTO topology_allocations (
+        aanwijzing_id, nama_lop, id_ihld, area, sto, olt_name, odc_name, frame, slot, port, port_str
+      ) VALUES ('AAN-OLD', 'OLD LOP', 'IHLD-OLD', 'RIKEP', 'LBJ', 'OLT-LBJ-1', 'OLD-ODC', 1, 1, 1, '1/1/1')
+    `).run();
+
+    const payload = {
+      nama_lop: 'RKP TSEL PT3 LBJ-FAN BUGIS JUNCTION',
+      id_ihld: 'IHLD-NEW',
+      tanggal_aanwijzing: '2026-05-18',
+      area: 'RIKEP',
+      sto: 'LBJ',
+      gpon: 'OLT-LBJ-1',
+      odc_name: 'LBJ-FAN',
+      frame: 1,
+      slot_awal: 1,
+      slot_akhir: 1,
+      port_awal: 1,
+      port_akhir: 1,
+    };
+
+    const blocked = await POST(new Request('http://localhost/api/aanwijzing', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }) as never);
+    const blockedBody = await blocked.json();
+
+    expect(blocked.status).toBe(409);
+    expect(blockedBody.details.code).toBe('TOPOLOGY_ALLOCATION_CONFLICT');
+
+    const overwritten = await POST(new Request('http://localhost/api/aanwijzing', {
+      method: 'POST',
+      body: JSON.stringify({ ...payload, allow_overwrite: true }),
+    }) as never);
+
+    expect(overwritten.status).toBe(200);
+    expect(
+      state.db.prepare('SELECT odc_name, id_ihld FROM topology_allocations WHERE olt_name = ? AND slot = ? AND port = ?')
+        .get('OLT-LBJ-1', 1, 1)
+    ).toEqual({ odc_name: 'LBJ-FAN', id_ihld: 'IHLD-NEW' });
+  });
+
   it('stores UT BoQ rows in normalized items when submitted from the form', async () => {
     const { POST } = await import('../src/app/api/ut/route');
 

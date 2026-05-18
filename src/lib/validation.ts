@@ -33,10 +33,13 @@ export const aanwijzingSchema = z.object({
   nama_lop: nameSchema,
   id_ihld: z.string().min(1, 'ID IHLD tidak boleh kosong'),
   tematik: optionalTextSchema,
+  area: optionalTextSchema,
+  sto: optionalTextSchema,
   tanggal_aanwijzing: dateSchema,
   catatan: optionalTextSchema,
   status_after_aanwijzing: optionalTextSchema,
   gpon: optionalTextSchema,
+  odc_name: optionalTextSchema,
   frame: optionalIntSchema,
   slot_awal: optionalIntSchema,
   slot_akhir: optionalIntSchema,
@@ -44,6 +47,7 @@ export const aanwijzingSchema = z.object({
   port_akhir: optionalIntSchema,
   wa_spang: optionalTextSchema,
   ut: optionalTextSchema,
+  allow_overwrite: z.boolean().optional().default(false),
 });
 
 export type AanwijzingInput = z.infer<typeof aanwijzingSchema>;

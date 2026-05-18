@@ -24,6 +24,32 @@ export class OltOdcRepository {
     ).all() as OltOdcRow[];
   }
 
+  static getDistinctOdcNames(): string[] {
+    return db.prepare(`
+      SELECT DISTINCT odc_name
+      FROM olt_odc_map
+      WHERE odc_name != ''
+      ORDER BY odc_name
+    `).all().map((row) => (row as { odc_name: string }).odc_name);
+  }
+
+  static getOlts(area?: string, sto?: string): { area: string; sto: string; olt_name: string }[] {
+    if (area && sto) {
+      return db.prepare(`
+        SELECT DISTINCT area, sto, olt_name
+        FROM olt_odc_map
+        WHERE area = ? AND sto = ?
+        ORDER BY olt_name
+      `).all(area, sto) as { area: string; sto: string; olt_name: string }[];
+    }
+
+    return db.prepare(`
+      SELECT DISTINCT area, sto, olt_name
+      FROM olt_odc_map
+      ORDER BY area, sto, olt_name
+    `).all() as { area: string; sto: string; olt_name: string }[];
+  }
+
   static bulkInsert(rows: Omit<OltOdcRow, 'id'>[]): void {
     if (rows.length === 0) return;
     const insert = db.prepare(

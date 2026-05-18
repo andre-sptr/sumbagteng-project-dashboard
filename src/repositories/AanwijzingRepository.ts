@@ -1,15 +1,20 @@
 import { db } from '../lib/db';
 import type { BoqItem } from '../lib/excel';
+import type { AllocationRow } from '@/lib/topology-allocation';
+import { TopologyAllocationRepository } from './TopologyAllocationRepository';
 
 export interface Aanwijzing {
   id: string;
   nama_lop: string;
   id_ihld: string;
   tematik: string;
+  area: string;
+  sto: string;
   tanggal_aanwijzing: string;
   catatan: string;
   status_after_aanwijzing: string;
   gpon: string;
+  odc_name: string;
   frame: number;
   slot_awal: number;
   slot_akhir: number;
@@ -60,19 +65,22 @@ export class AanwijzingRepository {
   static upsert(data: Omit<Aanwijzing, 'created_at' | 'updated_at'>) {
     return db.prepare(`
       INSERT INTO aanwijzing (
-        id, nama_lop, id_ihld, tematik, tanggal_aanwijzing, catatan,
-        status_after_aanwijzing, gpon, frame, slot_awal, slot_akhir,
+        id, nama_lop, id_ihld, tematik, area, sto, tanggal_aanwijzing, catatan,
+        status_after_aanwijzing, gpon, odc_name, frame, slot_awal, slot_akhir,
         port_awal, port_akhir, wa_spang, ut, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       ON CONFLICT(id) DO UPDATE SET
         nama_lop = excluded.nama_lop,
         id_ihld = excluded.id_ihld,
         tematik = excluded.tematik,
+        area = excluded.area,
+        sto = excluded.sto,
         tanggal_aanwijzing = excluded.tanggal_aanwijzing,
         catatan = excluded.catatan,
         status_after_aanwijzing = excluded.status_after_aanwijzing,
         gpon = excluded.gpon,
+        odc_name = excluded.odc_name,
         frame = excluded.frame,
         slot_awal = excluded.slot_awal,
         slot_akhir = excluded.slot_akhir,
@@ -83,10 +91,21 @@ export class AanwijzingRepository {
         updated_at = CURRENT_TIMESTAMP
     `).run(
       data.id, data.nama_lop, data.id_ihld, data.tematik,
-      data.tanggal_aanwijzing, data.catatan, data.status_after_aanwijzing,
-      data.gpon, data.frame, data.slot_awal, data.slot_akhir,
+      data.area, data.sto, data.tanggal_aanwijzing, data.catatan, data.status_after_aanwijzing,
+      data.gpon, data.odc_name, data.frame, data.slot_awal, data.slot_akhir,
       data.port_awal, data.port_akhir, data.wa_spang, data.ut
     );
+  }
+
+  static upsertWithAllocations(
+    data: Omit<Aanwijzing, 'created_at' | 'updated_at'>,
+    allocations: AllocationRow[],
+    overwrite: boolean
+  ) {
+    return db.transaction(() => {
+      this.upsert(data);
+      TopologyAllocationRepository.replaceForAanwijzing(data.id, allocations, overwrite);
+    })();
   }
 
   static getBoq(aanwijzingId: string): BoqAanwijzing | undefined {
