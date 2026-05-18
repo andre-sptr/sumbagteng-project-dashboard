@@ -14,7 +14,6 @@ export interface UT {
   jumlah_port: number;
   tanggal_ct_ut: string;
   temuan: string;
-  follow_up_mitra: number;
   mitra: string;
   jumlah_temuan: number;
   wa_spang: string;
@@ -64,10 +63,10 @@ export class UtRepository {
     return db.prepare(`
       INSERT INTO ut (
         id, nama_lop, id_ihld, witel, tematik, sto, tim_ut, commtest_ut,
-        jumlah_odp, jumlah_port, tanggal_ct_ut, temuan, follow_up_mitra,
-        mitra, jumlah_temuan, wa_spang, komitmen_penyelesaian, created_at, updated_at
+        jumlah_odp, jumlah_port, tanggal_ct_ut, temuan, mitra,
+        jumlah_temuan, wa_spang, komitmen_penyelesaian, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       ON CONFLICT(id) DO UPDATE SET
         nama_lop = excluded.nama_lop,
         id_ihld = excluded.id_ihld,
@@ -80,7 +79,6 @@ export class UtRepository {
         jumlah_port = excluded.jumlah_port,
         tanggal_ct_ut = excluded.tanggal_ct_ut,
         temuan = excluded.temuan,
-        follow_up_mitra = excluded.follow_up_mitra,
         mitra = excluded.mitra,
         jumlah_temuan = excluded.jumlah_temuan,
         wa_spang = excluded.wa_spang,
@@ -89,8 +87,8 @@ export class UtRepository {
     `).run(
       data.id, data.nama_lop, data.id_ihld, data.witel, data.tematik,
       data.sto, data.tim_ut, data.commtest_ut, data.jumlah_odp, data.jumlah_port,
-      data.tanggal_ct_ut, data.temuan, data.follow_up_mitra, data.mitra,
-      data.jumlah_temuan, data.wa_spang, data.komitmen_penyelesaian
+      data.tanggal_ct_ut, data.temuan, data.mitra, data.jumlah_temuan,
+      data.wa_spang, data.komitmen_penyelesaian
     );
   }
 

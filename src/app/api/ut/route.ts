@@ -51,7 +51,6 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
       jumlah_port: validated.jumlah_port || 0,
       tanggal_ct_ut: validated.tanggal_ct_ut || '',
       temuan: validated.temuan || '',
-      follow_up_mitra: validated.follow_up_mitra || 0,
       mitra: validated.mitra || '',
       jumlah_temuan: validated.jumlah_temuan || 0,
       wa_spang: validated.wa_spang || '',

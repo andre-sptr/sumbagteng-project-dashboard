@@ -77,7 +77,6 @@ export const utSchema = z.object({
   jumlah_port: optionalIntSchema,
   tanggal_ct_ut: z.string().optional().default(''),
   temuan: optionalTextSchema,
-  follow_up_mitra: optionalIntSchema,
   mitra: optionalTextSchema,
   jumlah_temuan: optionalIntSchema,
   wa_spang: optionalTextSchema,

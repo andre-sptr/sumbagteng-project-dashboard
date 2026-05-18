@@ -56,7 +56,6 @@ const migrations: Migration[] = [
           jumlah_port INTEGER DEFAULT 0,
           tanggal_ct_ut TEXT DEFAULT '',
           temuan TEXT DEFAULT '',
-          follow_up_mitra INTEGER DEFAULT 0,
           mitra TEXT DEFAULT '',
           jumlah_temuan INTEGER DEFAULT 0,
           wa_spang TEXT DEFAULT '',
@@ -572,6 +571,16 @@ const migrations: Migration[] = [
         if (boqCols.includes(col)) {
           db.exec(`ALTER TABLE boq DROP COLUMN ${col}`);
         }
+      }
+    }
+  },
+  {
+    id: 15,
+    name: 'drop_ut_follow_up_mitra',
+    run: (db) => {
+      const utCols = (db.pragma('table_info(ut)') as { name: string }[]).map(c => c.name);
+      if (utCols.includes('follow_up_mitra')) {
+        db.exec(`ALTER TABLE ut DROP COLUMN follow_up_mitra`);
       }
     }
   },

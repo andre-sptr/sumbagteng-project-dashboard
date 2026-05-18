@@ -23,7 +23,6 @@ interface UTData {
   jumlah_port: number;
   tanggal_ct_ut: string;
   temuan: string;
-  follow_up_mitra: number;
   mitra: string;
   jumlah_temuan: number;
   wa_spang: string;
@@ -66,7 +65,6 @@ export default function UTPage() {
     jumlah_port: '',
     tanggal_ct_ut: '',
     temuan: '',
-    follow_up_mitra: false,
     mitra: '',
     jumlah_temuan: '',
     wa_spang: '',
@@ -217,7 +215,6 @@ export default function UTPage() {
       jumlah_port: String(item.jumlah_port || ''),
       tanggal_ct_ut: item.tanggal_ct_ut || '',
       temuan: item.temuan || '',
-      follow_up_mitra: item.follow_up_mitra === 1,
       mitra: item.mitra || '',
       jumlah_temuan: String(item.jumlah_temuan || ''),
       wa_spang: item.wa_spang || '',
@@ -269,7 +266,6 @@ export default function UTPage() {
       jumlah_port: '',
       tanggal_ct_ut: '',
       temuan: '',
-      follow_up_mitra: false,
       mitra: '',
       jumlah_temuan: '',
       wa_spang: '',
@@ -511,29 +507,15 @@ export default function UTPage() {
               <p className="text-[10px] text-gray-400 mt-1">Gunakan format: 1. ... 2. ... 3. ...</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 pt-6">
-                <input
-                  type="checkbox"
-                  id="follow_up_mitra"
-                  checked={formData.follow_up_mitra}
-                  onChange={(e) => setFormData({ ...formData, follow_up_mitra: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="follow_up_mitra" className="text-sm text-gray-700 dark:text-gray-300">
-                  Follow Up dari Mitra
-                </label>
-              </div>
-              <div>
-                <label className={labelClass}>Mitra</label>
-                <input
-                  type="text"
-                  value={formData.mitra}
-                  onChange={(e) => setFormData({ ...formData, mitra: e.target.value })}
-                  className={inputClass}
-                  placeholder="Masukkan MITRA..."
-                />
-              </div>
+            <div>
+              <label className={labelClass}>Mitra</label>
+              <input
+                type="text"
+                value={formData.mitra}
+                onChange={(e) => setFormData({ ...formData, mitra: e.target.value })}
+                className={inputClass}
+                placeholder="Masukkan MITRA..."
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
