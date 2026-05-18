@@ -25,6 +25,9 @@ export const GET = withErrorHandling(async () => {
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
   const body = await request.json();
+  if ((body as { id?: unknown }).id === null) {
+    delete (body as { id?: unknown }).id;
+  }
 
   const validationResult = utSchema.safeParse(body);
   if (!validationResult.success) {

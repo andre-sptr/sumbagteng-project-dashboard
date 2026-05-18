@@ -3,16 +3,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, Trash2, FileText, ChevronLeft, ChevronRight, X, Loader2, Eye, Plus, Save, ChevronDown } from 'lucide-react';
+import { normalizeBoqItems } from '@/lib/boq-items';
 
 interface ProjectOption {
   nama_lop: string;
   id_ihld: string;
-}
-
-interface BoqRow {
-  id_ihld: string;
-  batch_program: string;
-  full_data: string;
 }
 
 interface ExcelTableRow {
@@ -249,27 +244,53 @@ export default function BoqPage() {
     };
   };
 
+  const parseBoqItemTableRow = (item: ReturnType<typeof normalizeBoqItems>[number]): ExcelTableRow => {
+    const isSummary = false;
+
+    return {
+      no: item.is_section ? String.fromCharCode(65) : String(item.no || '-'),
+      isSection: item.is_section,
+      isSummary,
+      designator: item.designator || '-',
+      deskripsiPekerjaan: item.uraian_pekerjaan || '-',
+      satuan: item.satuan || '-',
+      materialSatuan: item.harga_satuan_material,
+      jasaSatuan: item.harga_satuan_jasa,
+      volume: item.volume,
+      totalMaterial: item.total_material,
+      totalJasa: item.total_jasa,
+      totalHarga: item.total,
+      keterangan: item.keterangan || '-',
+    };
+  };
+
   const parseBoqDetails = (fullDataJson: string, item: BoqData): ParsedBoqDetail[] => {
     try {
-      const rawRows: BoqRow[] = JSON.parse(fullDataJson);
+      const rawRows = JSON.parse(fullDataJson);
       const detail: ParsedBoqDetail = {
         projectName: item.project_name || item.nama_lop || 'Unknown',
         sto: item.sto || '-',
         tableRows: [],
       };
 
-      rawRows.forEach((row, index) => {
-        try {
-          const fullDataArray: unknown[] = JSON.parse(row.full_data);
-          const tableRow = parseExcelTableRow(fullDataArray, index);
+      const normalizedRows = normalizeBoqItems(rawRows);
+      if (normalizedRows.length > 0) {
+        detail.tableRows = normalizedRows.map(parseBoqItemTableRow);
+      } else if (Array.isArray(rawRows)) {
+        rawRows.forEach((row, index) => {
+          try {
+            if (!row || typeof row !== 'object' || !('full_data' in row)) return;
+            const fullDataArray: unknown[] = JSON.parse(String(row.full_data || '[]'));
+            const tableRow = parseExcelTableRow(fullDataArray, index);
 
-          if (!tableRow.isSummary) {
-            detail.tableRows.push(tableRow);
+            if (!tableRow.isSummary) {
+              detail.tableRows.push(tableRow);
+            }
+          } catch (e) {
+            console.warn('Failed to parse row:', row, e);
           }
-        } catch (e) {
-          console.warn('Failed to parse row:', row, e);
-        }
-      });
+        });
+      }
 
       return [detail];
     } catch (e) {
@@ -320,8 +341,8 @@ export default function BoqPage() {
     <div className="w-full">
       {notification && (
         <div className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium animate-in fade-in slide-in-from-right-4 ${notification.type === 'success'
-            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
-            : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
+          : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
           }`}>
           {notification.message}
         </div>
@@ -426,8 +447,8 @@ export default function BoqPage() {
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                 onDragLeave={() => setIsDragging(false)}
                 className={`relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${isDragging
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                   }`}
               >
                 <input
@@ -479,7 +500,7 @@ export default function BoqPage() {
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-800/50">
                   <tr>
-                    <th scope="col" className="px-3 py-3 text-left text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Project / STO</th>
+                    <th scope="col" className="px-3 py-3 text-left text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Project / ID IHLD</th>
                     <th scope="col" className="px-3 py-3 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">Data Rows</th>
                     <th scope="col" className="px-3 py-3 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Tanggal</th>
                     <th scope="col" className="px-3 py-3 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Aksi</th>
@@ -493,7 +514,7 @@ export default function BoqPage() {
                           {item.project_name || item.nama_lop}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px] sm:max-w-[200px] flex items-center gap-1">
-                          <span className="font-medium">STO:</span> {item.sto || '-'}
+                          <span className="font-medium">{item.id_ihld || '-'}</span>
                         </div>
                       </td>
                       <td className="px-3 py-3 text-center text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
@@ -591,8 +612,8 @@ export default function BoqPage() {
                       <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200/50 dark:border-gray-700/50">
                         <div className="w-2 h-8 bg-gradient-to-b from-yellow-400 to-orange-500 rounded-full"></div>
                         <div>
-                          <h4 className="text-lg font-bold text-gray-900 dark:text-white">{detail.projectName}</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">STO: {detail.sto}</p>
+                          <h4 className="text-lg font-bold text-gray-900 dark:text-white">{selectedBoq.nama_lop}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">ID IHLD: {selectedBoq.id_ihld}</p>
                         </div>
                       </div>
 

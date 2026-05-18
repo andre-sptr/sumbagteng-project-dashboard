@@ -277,20 +277,20 @@ export default function SyncSettingsPage() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               <div>
-                <p className="text-slate-400 text-sm mb-1">Processed</p>
-                <p className="text-3xl font-bold">{latestSync.records_processed}</p>
+                <p className="text-left text-slate-400 text-sm mb-1">Processed</p>
+                <p className="text-left text-3xl font-bold">{latestSync.records_processed}</p>
               </div>
               <div>
-                <p className="text-emerald-400 text-sm mb-1">Created</p>
-                <p className="text-3xl font-bold">{latestSync.records_created}</p>
+                <p className="text-left text-emerald-400 text-sm mb-1">Created</p>
+                <p className="text-left text-3xl font-bold">{latestSync.records_created}</p>
               </div>
               <div>
-                <p className="text-blue-400 text-sm mb-1">Updated</p>
-                <p className="text-3xl font-bold">{latestSync.records_updated}</p>
+                <p className="text-left text-blue-400 text-sm mb-1">Updated</p>
+                <p className="text-left text-3xl font-bold">{latestSync.records_updated}</p>
               </div>
               <div>
-                <p className="text-red-400 text-sm mb-1">Failed</p>
-                <p className="text-3xl font-bold">{latestSync.records_failed}</p>
+                <p className="text-left text-red-400 text-sm mb-1">Failed</p>
+                <p className="text-left text-3xl font-bold">{latestSync.records_failed}</p>
               </div>
             </div>
 
@@ -319,12 +319,12 @@ export default function SyncSettingsPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Time</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Records</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Duration</th>
-                <th className="px-6 py-4"></th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Time</th>
+                <th className="text-center px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+                <th className="text-center px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="text-center px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Records</th>
+                <th className="text-center px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Duration</th>
+                <th className="text-right px-6 py-4"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -340,7 +340,7 @@ export default function SyncSettingsPage() {
                       className="hover:bg-slate-50/50 transition-colors cursor-pointer"
                       onClick={() => toggleRow(log.id)}
                     >
-                      <td className="px-6 py-4">
+                      <td className="text-left px-6 py-4">
                         <p className="text-sm font-medium text-slate-700">
                           {format(new Date(log.started_at), 'HH:mm:ss', { locale: id })}
                         </p>
@@ -348,13 +348,13 @@ export default function SyncSettingsPage() {
                           {format(new Date(log.started_at), 'dd MMM yyyy', { locale: id })}
                         </p>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="text-center px-6 py-4">
                         <span className="text-xs font-bold px-2 py-1 rounded bg-slate-100 text-slate-600 uppercase tracking-tight">
                           {log.sync_type}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
+                      <td className="text-center px-6 py-4">
+                        <div className="text-center flex items-center gap-2">
                           {log.status === 'SUCCESS' ? (
                             <span className="flex items-center gap-1 text-emerald-600 text-sm font-medium">
                               <CheckCircle2 className="w-4 h-4" /> Success

@@ -366,19 +366,19 @@ export default function BoqTrackingPage() {
                       Project
                     </th>
                   )}
-                  <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     AANWIJZING Qty
                   </th>
-                  <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Terpakai
                   </th>
-                  <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Sisa Qty
                   </th>
-                  <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Cost Keluar
                   </th>
-                  <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Nilai Sisa
                   </th>
                   <th className="px-4 py-3 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -420,19 +420,19 @@ export default function BoqTrackingPage() {
                           {formatNumber(row.jumlah_project || 0)}
                         </td>
                       )}
-                      <td className="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-300 tabular-nums">
+                      <td className="px-4 py-3 text-center text-sm text-gray-700 dark:text-gray-300 tabular-nums">
                         {formatNumber(row.aanwijzing_vol)}
                       </td>
-                      <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-white tabular-nums">
+                      <td className="px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white tabular-nums">
                         {formatNumber(row.ut_vol)}
                       </td>
-                      <td className={`px-4 py-3 text-right text-sm font-bold tabular-nums ${row.remaining_vol < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                      <td className={`px-4 py-3 text-center text-sm font-bold tabular-nums ${row.remaining_vol < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                         {formatNumber(row.remaining_vol)}
                       </td>
-                      <td className="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-300 tabular-nums whitespace-nowrap">
+                      <td className="px-4 py-3 text-center text-sm text-gray-700 dark:text-gray-300 tabular-nums whitespace-nowrap">
                         {formatCurrency(row.ut_cost)}
                       </td>
-                      <td className={`px-4 py-3 text-right text-sm font-semibold tabular-nums whitespace-nowrap ${row.remaining_cost < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
+                      <td className={`px-4 py-3 text-center text-sm font-semibold tabular-nums whitespace-nowrap ${row.remaining_cost < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
                         {formatCurrency(row.remaining_cost)}
                       </td>
                       <td className="px-4 py-3 text-center">

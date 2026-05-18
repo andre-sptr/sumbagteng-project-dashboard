@@ -181,7 +181,7 @@ export default function UTPage() {
           jumlah_port: Number(formData.jumlah_port) || 0,
           jumlah_temuan: Number(formData.jumlah_temuan) || 0,
           boq_data: boqRows.length > 0 ? boqRows : null,
-          id: editingId,
+          id: editingId ?? undefined,
         }),
       });
 

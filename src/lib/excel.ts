@@ -15,15 +15,6 @@ export interface BoqItem {
   keterangan: string;
 }
 
-// Excel column layout (0-indexed):
-// 0=NO, 1=DESIGNATOR, 2=URAIAN PEKERJAAN, 3=SATUAN,
-// 4=HARGA SATUAN MATERIAL, 5=HARGA SATUAN JASA, 6=VOL,
-// 7=TOTAL MATERIAL, 8=TOTAL JASA, 9=TOTAL, 10=KETERANGAN
-//
-// Rows 0-1: headers — skip
-// Row 2+:   data (includes section headers e.g. "A | PT2S")
-// Skip rows where NO = "MATERIAL", "JASA", or "TOTAL" (summary rows at bottom)
-
 function toNum(val: unknown): number {
   if (val === null || val === undefined || val === '') return 0;
   const n = typeof val === 'number' ? val : parseFloat(String(val).replace(/,/g, ''));

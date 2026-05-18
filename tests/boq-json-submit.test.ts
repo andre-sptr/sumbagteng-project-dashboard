@@ -55,6 +55,7 @@ describe('BoQ JSON submit routes', () => {
         nama_lop: 'LOP A',
         id_ihld: 'IHLD-A',
         tanggal_aanwijzing: '2026-05-18',
+        id: null,
         boq_data: [boqItem],
       }),
     }) as never);
@@ -82,6 +83,7 @@ describe('BoQ JSON submit routes', () => {
         nama_lop: 'LOP A',
         id_ihld: 'IHLD-A',
         tanggal_ct_ut: '2026-05-18',
+        id: null,
         boq_data: [boqItem],
       }),
     }) as never);

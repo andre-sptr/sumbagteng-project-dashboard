@@ -161,7 +161,7 @@ export default function AanwijzingPage() {
           port_awal: Number(formData.port_awal) || 0,
           port_akhir: Number(formData.port_akhir) || 0,
           boq_data: boqRows.length > 0 ? boqRows : null,
-          id: editingId,
+          id: editingId ?? undefined,
         }),
       });
 
