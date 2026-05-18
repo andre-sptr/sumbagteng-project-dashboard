@@ -4,8 +4,8 @@ import { successResponse, withErrorHandling } from '@/lib/response';
 
 export const dynamic = 'force-dynamic';
 
-// GET /api/boq/tracking            → global aggregate (all designators across all UT)
-// GET /api/boq/tracking?id_ihld=X  → per-project comparison (Plan vs UT)
+// GET /api/boq/tracking            → global aggregate (AANWIJZING vs UT)
+// GET /api/boq/tracking?id_ihld=X  → per-project comparison (AANWIJZING vs UT)
 export const GET = withErrorHandling(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
   const id_ihld = searchParams.get('id_ihld');

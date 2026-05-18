@@ -16,16 +16,22 @@ export interface Boq {
 export interface TrackingGlobalRow {
   designator: string;
   jumlah_project: number;
-  total_vol: number;
-  total_cost: number;
+  aanwijzing_vol: number;
+  aanwijzing_cost: number;
+  ut_vol: number;
+  ut_cost: number;
+  remaining_vol: number;
+  remaining_cost: number;
 }
 
 export interface TrackingProjectRow {
   designator: string;
-  plan_vol: number | null;
-  plan_cost: number | null;
-  ut_vol: number | null;
-  ut_cost: number | null;
+  aanwijzing_vol: number;
+  aanwijzing_cost: number;
+  ut_vol: number;
+  ut_cost: number;
+  remaining_vol: number;
+  remaining_cost: number;
 }
 
 export class BoqRepository {
@@ -64,6 +70,7 @@ export class BoqRepository {
     items: BoqItem[]
   ): string {
     const txn = db.transaction((): string => {
+      const fullData = JSON.stringify(items);
       const existing = db.prepare('SELECT id FROM boq WHERE project_uid = ?')
         .get(data.project_uid) as { id: string } | undefined;
 
@@ -71,14 +78,14 @@ export class BoqRepository {
       if (existing) {
         boqId = existing.id;
         db.prepare(
-          'UPDATE boq SET nama_lop = ?, id_ihld = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-        ).run(data.nama_lop, data.id_ihld, boqId);
+          'UPDATE boq SET nama_lop = ?, id_ihld = ?, full_data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+        ).run(data.nama_lop, data.id_ihld, fullData, boqId);
       } else {
         boqId = `boq_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         db.prepare(`
           INSERT INTO boq (id, nama_lop, id_ihld, sto, project_name, full_data, project_uid, created_at, updated_at)
-          VALUES (?, ?, ?, '', ?, '', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        `).run(boqId, data.nama_lop, data.id_ihld, data.nama_lop, data.project_uid);
+          VALUES (?, ?, ?, '', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `).run(boqId, data.nama_lop, data.id_ihld, data.nama_lop, fullData, data.project_uid);
       }
 
       db.prepare('DELETE FROM boq_plan_items WHERE boq_plan_id = ?').run(boqId);
@@ -112,28 +119,97 @@ export class BoqRepository {
 
   static getTrackingGlobal(): TrackingGlobalRow[] {
     return db.prepare(`
-      SELECT designator,
-             COUNT(DISTINCT id_ihld) AS jumlah_project,
-             SUM(volume)             AS total_vol,
-             SUM(total)              AS total_cost
-      FROM boq_ut_items
-      GROUP BY designator
-      ORDER BY total_cost DESC
+      WITH aanwijzing AS (
+        SELECT designator,
+               SUM(volume) AS aanwijzing_vol,
+               SUM(total)  AS aanwijzing_cost
+        FROM boq_aanwijzing_items
+        WHERE is_section = 0 AND TRIM(designator) != ''
+        GROUP BY designator
+      ),
+      ut AS (
+        SELECT designator,
+               SUM(volume) AS ut_vol,
+               SUM(total)  AS ut_cost
+        FROM boq_ut_items
+        WHERE is_section = 0 AND TRIM(designator) != ''
+        GROUP BY designator
+      ),
+      projects AS (
+        SELECT designator,
+               COUNT(DISTINCT id_ihld) AS jumlah_project
+        FROM (
+          SELECT designator, id_ihld
+          FROM boq_aanwijzing_items
+          WHERE is_section = 0 AND TRIM(designator) != ''
+          UNION
+          SELECT designator, id_ihld
+          FROM boq_ut_items
+          WHERE is_section = 0 AND TRIM(designator) != ''
+        )
+        GROUP BY designator
+      ),
+      designators AS (
+        SELECT designator FROM aanwijzing
+        UNION
+        SELECT designator FROM ut
+      )
+      SELECT d.designator,
+             COALESCE(projects.jumlah_project, 0)       AS jumlah_project,
+             COALESCE(aanwijzing.aanwijzing_vol, 0)     AS aanwijzing_vol,
+             COALESCE(aanwijzing.aanwijzing_cost, 0)    AS aanwijzing_cost,
+             COALESCE(ut.ut_vol, 0)                     AS ut_vol,
+             COALESCE(ut.ut_cost, 0)                    AS ut_cost,
+             COALESCE(aanwijzing.aanwijzing_vol, 0) - COALESCE(ut.ut_vol, 0)     AS remaining_vol,
+             COALESCE(aanwijzing.aanwijzing_cost, 0) - COALESCE(ut.ut_cost, 0)   AS remaining_cost
+      FROM designators d
+      LEFT JOIN aanwijzing ON aanwijzing.designator = d.designator
+      LEFT JOIN ut ON ut.designator = d.designator
+      LEFT JOIN projects ON projects.designator = d.designator
+      ORDER BY ut_cost DESC, remaining_cost DESC, d.designator ASC
     `).all() as TrackingGlobalRow[];
   }
 
   static getTrackingByProject(idIhld: string): TrackingProjectRow[] {
     return db.prepare(`
-      SELECT bp.designator,
-             bp.volume AS plan_vol,
-             bp.total  AS plan_cost,
-             bu.volume AS ut_vol,
-             bu.total  AS ut_cost
-      FROM boq_plan_items bp
-      LEFT JOIN boq_ut_items bu
-        ON bu.id_ihld = bp.id_ihld AND bu.designator = bp.designator
-      WHERE bp.id_ihld = ?
-      ORDER BY bp.no ASC
-    `).all(idIhld) as TrackingProjectRow[];
+      WITH aanwijzing AS (
+        SELECT designator,
+               MIN(no)      AS sort_no,
+               SUM(volume)  AS aanwijzing_vol,
+               SUM(total)   AS aanwijzing_cost
+        FROM boq_aanwijzing_items
+        WHERE id_ihld = ? AND is_section = 0 AND TRIM(designator) != ''
+        GROUP BY designator
+      ),
+      ut AS (
+        SELECT designator,
+               MIN(no)      AS sort_no,
+               SUM(volume)  AS ut_vol,
+               SUM(total)   AS ut_cost
+        FROM boq_ut_items
+        WHERE id_ihld = ? AND is_section = 0 AND TRIM(designator) != ''
+        GROUP BY designator
+      ),
+      designators AS (
+        SELECT designator, MIN(sort_no) AS sort_no
+        FROM (
+          SELECT designator, sort_no FROM aanwijzing
+          UNION ALL
+          SELECT designator, sort_no FROM ut
+        )
+        GROUP BY designator
+      )
+      SELECT d.designator,
+             COALESCE(aanwijzing.aanwijzing_vol, 0)     AS aanwijzing_vol,
+             COALESCE(aanwijzing.aanwijzing_cost, 0)    AS aanwijzing_cost,
+             COALESCE(ut.ut_vol, 0)                     AS ut_vol,
+             COALESCE(ut.ut_cost, 0)                    AS ut_cost,
+             COALESCE(aanwijzing.aanwijzing_vol, 0) - COALESCE(ut.ut_vol, 0)     AS remaining_vol,
+             COALESCE(aanwijzing.aanwijzing_cost, 0) - COALESCE(ut.ut_cost, 0)   AS remaining_cost
+      FROM designators d
+      LEFT JOIN aanwijzing ON aanwijzing.designator = d.designator
+      LEFT JOIN ut ON ut.designator = d.designator
+      ORDER BY d.sort_no ASC, d.designator ASC
+    `).all(idIhld, idIhld) as TrackingProjectRow[];
   }
 }

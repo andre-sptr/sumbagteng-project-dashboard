@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { UtRepository } from '@/repositories/UtRepository';
 import { ProjectRepository } from '@/repositories/ProjectRepository';
 import { successResponse, withErrorHandling } from '@/lib/response';
+import { normalizeBoqItems } from '@/lib/boq-items';
 import {
   utSchema,
   utQuerySchema,
@@ -54,16 +55,16 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
       komitmen_penyelesaian: validated.komitmen_penyelesaian || ''
     });
 
-    const boq_data = (body as { boq_data?: unknown[] }).boq_data;
-    if (boq_data) {
-      const boqId = `boqut_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      UtRepository.upsertBoq({
-        id: boqId,
-        ut_id: utId,
-        nama_lop: validated.nama_lop,
-        id_ihld: validated.id_ihld,
-        full_data: JSON.stringify(boq_data)
-      });
+    const boqItems = normalizeBoqItems((body as { boq_data?: unknown[] }).boq_data);
+    if (boqItems.length > 0) {
+      UtRepository.upsertBoqWithItems(
+        {
+          ut_id: utId,
+          nama_lop: validated.nama_lop,
+          id_ihld: validated.id_ihld,
+        },
+        boqItems
+      );
     }
   } catch (error) {
     throw new DatabaseError(`Gagal menyimpan data UT: ${(error as Error).message}`);

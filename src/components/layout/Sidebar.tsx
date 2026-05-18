@@ -49,6 +49,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: Activity,
     items: [
       { href: '/report', label: 'Report', icon: BarChart3 },
+      { href: '/boq-tracking', label: 'BoQ Tracking', icon: BarChart3 },
     ],
   },
   {

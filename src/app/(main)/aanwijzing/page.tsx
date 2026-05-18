@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Save, Trash2, Edit3, Plus, X, FileText, ChevronLeft, ChevronRight, Upload, Loader2, Eye } from 'lucide-react';
+import BoqPreviewTable from '@/components/features/boq/BoqPreviewTable';
 
 interface ProjectOption {
   nama_lop: string;
@@ -30,14 +31,6 @@ interface AanwijzingData {
   } | null;
   created_at: string;
 }
-
-interface BoqAanwijzingRow {
-  id_ihld: string;
-  batch_program: string;
-  full_data: string;
-}
-
-
 
 const ITEMS_PER_PAGE = 5;
 
@@ -716,32 +709,7 @@ export default function AanwijzingPage() {
 
             <div className="flex-1 overflow-auto p-4">
               <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-                <table className="w-full text-left border-collapse min-w-[1200px]">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900/50">
-                      <th className="px-3 py-2 text-[10px] font-black text-gray-500 uppercase border-b border-gray-200 dark:border-gray-700">ID IHLD</th>
-                      <th className="px-3 py-2 text-[10px] font-black text-gray-500 uppercase border-b border-gray-200 dark:border-gray-700">Batch</th>
-                      <th className="px-3 py-2 text-[10px] font-black text-gray-500 uppercase border-b border-gray-200 dark:border-gray-700">Data</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {(boqRows as BoqAanwijzingRow[]).map((row, idx) => {
-                      let fd: unknown[] = [];
-                      try {
-                        fd = JSON.parse(row.full_data || '[]');
-                      } catch (err) {
-                        console.error('Error parsing full_data:', err);
-                      }
-                      return (
-                        <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors">
-                          <td className="px-3 py-2 text-xs font-bold text-gray-900 dark:text-white">{row.id_ihld}</td>
-                          <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400">{row.batch_program}</td>
-                          <td className="px-3 py-2 text-[10px] font-mono text-gray-400 truncate max-w-lg">{JSON.stringify(fd)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <BoqPreviewTable rows={boqRows} />
               </div>
             </div>
 

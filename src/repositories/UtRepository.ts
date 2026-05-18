@@ -124,6 +124,7 @@ export class UtRepository {
     items: BoqItem[]
   ): string {
     const txn = db.transaction((): string => {
+      const fullData = JSON.stringify(items);
       const existing = db.prepare('SELECT id FROM boq_ut WHERE ut_id = ?')
         .get(data.ut_id) as { id: string } | undefined;
 
@@ -131,14 +132,14 @@ export class UtRepository {
       if (existing) {
         boqId = existing.id;
         db.prepare(
-          'UPDATE boq_ut SET nama_lop = ?, id_ihld = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-        ).run(data.nama_lop, data.id_ihld, boqId);
+          'UPDATE boq_ut SET nama_lop = ?, id_ihld = ?, full_data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+        ).run(data.nama_lop, data.id_ihld, fullData, boqId);
       } else {
         boqId = `boqut_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         db.prepare(`
           INSERT INTO boq_ut (id, ut_id, nama_lop, id_ihld, full_data, created_at, updated_at)
-          VALUES (?, ?, ?, ?, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        `).run(boqId, data.ut_id, data.nama_lop, data.id_ihld);
+          VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `).run(boqId, data.ut_id, data.nama_lop, data.id_ihld, fullData);
       }
 
       db.prepare('DELETE FROM boq_ut_items WHERE boq_ut_id = ?').run(boqId);

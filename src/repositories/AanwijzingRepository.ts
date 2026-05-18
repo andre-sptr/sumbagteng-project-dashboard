@@ -120,6 +120,7 @@ export class AanwijzingRepository {
     items: BoqItem[]
   ): string {
     const txn = db.transaction((): string => {
+      const fullData = JSON.stringify(items);
       const existing = db.prepare('SELECT id FROM boq_aanwijzing WHERE aanwijzing_id = ?')
         .get(data.aanwijzing_id) as { id: string } | undefined;
 
@@ -127,14 +128,14 @@ export class AanwijzingRepository {
       if (existing) {
         boqId = existing.id;
         db.prepare(
-          'UPDATE boq_aanwijzing SET nama_lop = ?, id_ihld = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-        ).run(data.nama_lop, data.id_ihld, boqId);
+          'UPDATE boq_aanwijzing SET nama_lop = ?, id_ihld = ?, full_data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+        ).run(data.nama_lop, data.id_ihld, fullData, boqId);
       } else {
         boqId = `boqa_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         db.prepare(`
           INSERT INTO boq_aanwijzing (id, aanwijzing_id, nama_lop, id_ihld, full_data, created_at, updated_at)
-          VALUES (?, ?, ?, ?, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        `).run(boqId, data.aanwijzing_id, data.nama_lop, data.id_ihld);
+          VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `).run(boqId, data.aanwijzing_id, data.nama_lop, data.id_ihld, fullData);
       }
 
       db.prepare('DELETE FROM boq_aanwijzing_items WHERE boq_aanwijzing_id = ?').run(boqId);

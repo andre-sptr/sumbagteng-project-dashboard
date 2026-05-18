@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { AanwijzingRepository } from '@/repositories/AanwijzingRepository';
 import { ProjectRepository } from '@/repositories/ProjectRepository';
 import { successResponse, withErrorHandling } from '@/lib/response';
+import { normalizeBoqItems } from '@/lib/boq-items';
 import {
   aanwijzingSchema,
   aanwijzingQuerySchema,
@@ -52,16 +53,16 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
       ut: validated.ut || ''
     });
 
-    const boq_data = (body as { boq_data?: unknown[] }).boq_data;
-    if (boq_data) {
-      const boqId = `boqa_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      AanwijzingRepository.upsertBoq({
-        id: boqId,
-        aanwijzing_id: aanwijzingId,
-        nama_lop: validated.nama_lop,
-        id_ihld: validated.id_ihld,
-        full_data: JSON.stringify(boq_data)
-      });
+    const boqItems = normalizeBoqItems((body as { boq_data?: unknown[] }).boq_data);
+    if (boqItems.length > 0) {
+      AanwijzingRepository.upsertBoqWithItems(
+        {
+          aanwijzing_id: aanwijzingId,
+          nama_lop: validated.nama_lop,
+          id_ihld: validated.id_ihld,
+        },
+        boqItems
+      );
     }
   } catch (error) {
     throw new DatabaseError(`Gagal menyimpan data AANWIJZING: ${(error as Error).message}`);

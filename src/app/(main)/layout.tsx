@@ -19,6 +19,10 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
     title: 'BoQ Plan',
     subtitle: 'Form pencatatan bill of quantity plan.',
   },
+  '/boq-tracking': {
+    title: 'BoQ Tracking',
+    subtitle: 'Monitoring sisa designator AANWIJZING dan cost BoQ UT.',
+  },
   '/aanwijzing': {
     title: 'Catatan AANWIJZING',
     subtitle: 'Form pencatatan aanwijzing project.',
