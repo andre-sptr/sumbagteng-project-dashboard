@@ -1,0 +1,14 @@
+> next dev
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://172.16.0.2:3001
+- Environments: .env
+✓ Ready in 1703ms
+[?25h
+⚠ Port 3000 is in use by process 2924, using available port 3001 instead.
+⨯ Another next dev server is already running.
+- Local:        http://localhost:3000
+- PID:          2924
+- Dir:          D:\dashboard-projects
+- Log:          .next\dev\logs\next-development.log
+Run taskkill /PID 2924 /F to stop it.

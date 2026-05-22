@@ -1,11 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { Project } from '../src/types/database';
 import { ProjectRow } from '../src/components/features/dashboard/ProjectRow';
-
-vi.mock('../src/components/features/documents/DocumentManager', () => ({
-  default: () => <div>Document manager</div>,
-}));
 
 const baseProject: Project = {
   uid: 'IHLD-1::BATCH-1',

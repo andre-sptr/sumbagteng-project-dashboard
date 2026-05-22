@@ -181,18 +181,18 @@ export default function DashboardClient({ initialProjects, columnConfig }: Props
 
       <div className="glass-panel rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-800/50">
+          <table className="min-w-full">
+            <thead className="bg-gray-100/80 dark:bg-gray-800/70 border-b border-gray-200 dark:border-gray-700">
               <tr>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID IHLD / Nama LOP</th>
-                <th scope="col" className="px-6 py-4 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                <th scope="col" className="px-6 py-4 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sub Status</th>
-                <th scope="col" className="px-6 py-4 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Tanggal Golive</th>
-                <th scope="col" className="px-6 py-4 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Durasi</th>
-                <th scope="col" className="px-6 py-4 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Detail</th>
+                <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID IHLD / Nama LOP</th>
+                <th scope="col" className="px-6 py-3.5 text-center text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                <th scope="col" className="px-6 py-3.5 text-center text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sub Status</th>
+                <th scope="col" className="px-6 py-3.5 text-center text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Tanggal Golive</th>
+                <th scope="col" className="px-6 py-3.5 text-center text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Durasi</th>
+                <th scope="col" className="px-6 py-3.5 text-center text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Detail</th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-900/50 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody>
               {paginatedProjects.length > 0 ? (
                 paginatedProjects.map((project, idx) => (
                   <ProjectRow
