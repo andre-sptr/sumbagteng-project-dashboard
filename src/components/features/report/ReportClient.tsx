@@ -35,7 +35,6 @@ interface Props {
 interface TrendEntry {
   name: string;
   actual: number;
-  planned: number;
   timestamp: number;
 }
 
@@ -137,11 +136,10 @@ export default function ReportClient({ initialProjects, colMap = DEFAULT_COLUMN_
     const goliveStats = buildDashboardStats(areaBranchFiltered, colMap);
 
     // --- Velocity trend (cumulative realized golive ports) ---
-    const timeSeriesMap = new Map<string, { name: string; actual: number; planned: number; timestamp: number }>();
+    const timeSeriesMap = new Map<string, { name: string; actual: number; timestamp: number }>();
 
     areaBranchFiltered.forEach(p => {
       const fullData = getFullDataArray(p);
-      const planPort = parseNumber(fullData[colMap.PORT_PLAN]);
       const realPort = parseNumber(fullData[colMap.REAL_JML_PORT_GOLIVE]);
       const goliveDate = parseExcelDate(fullData[colMap.TANGGAL_GOLIVE]);
       if (!goliveDate) return;
@@ -149,9 +147,8 @@ export default function ReportClient({ initialProjects, colMap = DEFAULT_COLUMN_
       const d = goliveDate;
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const label = d.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
-      const existing = timeSeriesMap.get(key) || { name: label, actual: 0, planned: 0, timestamp: d.getTime() };
+      const existing = timeSeriesMap.get(key) || { name: label, actual: 0, timestamp: d.getTime() };
       existing.actual += realPort;
-      existing.planned += planPort;
       timeSeriesMap.set(key, existing);
     });
 

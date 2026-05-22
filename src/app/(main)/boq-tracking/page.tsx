@@ -70,7 +70,7 @@ function formatCurrency(value: number) {
 function getStatus(row: TrackingRow) {
   if (row.remaining_vol < 0 || row.remaining_cost < 0) {
     return {
-      label: 'Melebihi AANWIJZING',
+      label: 'Selisih AANWIJZING',
       className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
     };
   }
@@ -316,7 +316,7 @@ export default function BoqTrackingPage() {
         />
         <KpiCard
           icon={AlertTriangle}
-          label="Melebihi AANWIJZING"
+          label="Selisih AANWIJZING"
           value={formatNumber(totals.overAanwijzing)}
           sub={`Nilai sisa ${formatCurrency(totals.remainingCost)}`}
           color="bg-rose-600"
