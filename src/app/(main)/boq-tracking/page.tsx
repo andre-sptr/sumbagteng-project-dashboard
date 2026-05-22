@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   ClipboardList,
@@ -45,6 +46,7 @@ interface KpiCardProps {
   value: string;
   sub: string;
   color: string;
+  onClick?: () => void;
 }
 
 const numberFormatter = new Intl.NumberFormat('id-ID', {
@@ -95,9 +97,29 @@ function getStatus(row: TrackingRow) {
   };
 }
 
-function KpiCard({ icon: Icon, label, value, sub, color }: KpiCardProps) {
+function KpiCard({ icon: Icon, label, value, sub, color, onClick }: KpiCardProps) {
+  const interactive = typeof onClick === 'function';
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+    <div
+      onClick={onClick}
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onKeyDown={
+        interactive
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
+      className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm ${
+        interactive
+          ? 'cursor-pointer transition hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 focus:outline-none focus:ring-2 focus:ring-rose-500'
+          : ''
+      }`}
+    >
       <div className="flex items-center gap-3">
         <div className={`h-10 w-10 rounded-lg ${color} text-white flex items-center justify-center shrink-0`}>
           <Icon size={20} />
@@ -119,6 +141,7 @@ function KpiCard({ icon: Icon, label, value, sub, color }: KpiCardProps) {
 }
 
 export default function BoqTrackingPage() {
+  const router = useRouter();
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [rows, setRows] = useState<TrackingRow[]>([]);
   const [selectedProject, setSelectedProject] = useState('');
@@ -320,6 +343,7 @@ export default function BoqTrackingPage() {
           value={formatNumber(totals.overAanwijzing)}
           sub={`Nilai sisa ${formatCurrency(totals.remainingCost)}`}
           color="bg-rose-600"
+          onClick={() => router.push('/boq-tracking/selisih-aanwijzing')}
         />
       </div>
 
