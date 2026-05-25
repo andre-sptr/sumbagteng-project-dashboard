@@ -333,3 +333,36 @@ describe('buildTopologyMapContext', () => {
     ]);
   });
 });
+
+describe('seedTopologyLocations', () => {
+  beforeEach(async () => {
+    await setupDb();
+  });
+
+  it('seeds topology locations from JSON rows', async () => {
+    const { seedTopologyLocationsFromRows } = await import('../src/lib/seed-topology-locations');
+    const { TopologyLocationRepository } = await import('../src/repositories/TopologyLocationRepository');
+
+    seedTopologyLocationsFromRows([
+      {
+        entity_type: 'core',
+        entity_name: 'SUMBAGTENG',
+        latitude: -0.9471,
+        longitude: 100.4172,
+        source: 'seed',
+        confidence: 'verified',
+      },
+    ]);
+
+    expect(TopologyLocationRepository.findAll()).toMatchObject([
+      {
+        entity_type: 'core',
+        entity_name: 'SUMBAGTENG',
+        latitude: -0.9471,
+        longitude: 100.4172,
+        source: 'seed',
+        confidence: 'verified',
+      },
+    ]);
+  });
+});
