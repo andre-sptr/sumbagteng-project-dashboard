@@ -40,7 +40,6 @@ function SlotPanel({
 }) {
   const slotByIndex = new Map<number, SlotData>(olt.slots.map(s => [s.slot, s]));
   const maxPortObserved = olt.slots.reduce((max, s) => Math.max(max, s.maxPort), 15);
-  const numSlots = olt.maxSlot + 1;
 
   // Vendor port numbering: HUAWEI starts at port 0 (0–15), ZTE starts at port 1
   // (1–16). Render the port axis over the vendor's real range (a full 16-port
@@ -55,6 +54,7 @@ function SlotPanel({
   // and ports spreading horizontally ("panjang ke samping"). Big chassis OLTs
   // keep the original ports-as-rows / slots-as-columns grid.
   const isMini = olt.oltType === 'mini';
+  const numSlots = olt.maxSlot + 1;
   const slotIndices = isMini
     ? olt.slots.map(s => s.slot).sort((a, b) => a - b)
     : Array.from({ length: numSlots }, (_, i) => i);
