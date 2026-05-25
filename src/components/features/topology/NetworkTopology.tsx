@@ -341,6 +341,7 @@ export default function NetworkTopology({
           <div className="flex items-center gap-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 p-1">
             <button
               type="button"
+              aria-pressed={activeView === 'hierarchy'}
               onClick={() => setActiveView('hierarchy')}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${
                 activeView === 'hierarchy'
@@ -353,6 +354,7 @@ export default function NetworkTopology({
             </button>
             <button
               type="button"
+              aria-pressed={activeView === 'map'}
               onClick={() => setActiveView('map')}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${
                 activeView === 'map'

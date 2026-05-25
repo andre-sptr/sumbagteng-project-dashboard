@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Box, Database, MapPinned, Network, Search, Zap } from 'lucide-react';
-import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from 'react-leaflet';
+import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, useMap } from 'react-leaflet';
 import type { TopologyHierarchy } from '@/lib/topology';
 import type {
   MissingTopologyLocation,
@@ -40,6 +40,36 @@ function getCenter(nodes: TopologyMapNode[]): [number, number] {
   const longitude = nodes.reduce((sum, node) => sum + node.longitude, 0) / nodes.length;
 
   return [latitude, longitude];
+}
+
+function getTracePositions(
+  trace: TopologyMapTrace,
+  nodesById: Map<string, TopologyMapNode>
+): [number, number][] {
+  return trace.pathNodeIds
+    .map(id => nodesById.get(id))
+    .filter((node): node is TopologyMapNode => Boolean(node))
+    .map(node => [node.latitude, node.longitude]);
+}
+
+function MapViewportSync({ coordinates }: { coordinates: [number, number][] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (coordinates.length >= 2) {
+      map.fitBounds(coordinates, { padding: [32, 32], maxZoom: 13 });
+      return;
+    }
+
+    if (coordinates.length === 1) {
+      map.setView(coordinates[0], 12);
+      return;
+    }
+
+    map.setView(DEFAULT_CENTER, 10);
+  }, [coordinates, map]);
+
+  return null;
 }
 
 function MissingLocations({ rows }: { rows: MissingTopologyLocation[] }) {
@@ -111,11 +141,16 @@ export default function TopologyMapView({
     [mapContext.nodes]
   );
   const selectedTrace = visibleTraces.find(trace => trace.id === selectedTraceId) ?? visibleTraces[0] ?? null;
-
-  const tracePositions = (trace: TopologyMapTrace) => trace.pathNodeIds
-    .map(id => nodesById.get(id))
-    .filter((node): node is TopologyMapNode => Boolean(node))
-    .map(node => [node.latitude, node.longitude] as [number, number]);
+  const selectedTracePositions = useMemo(
+    () => selectedTrace ? getTracePositions(selectedTrace, nodesById) : [],
+    [nodesById, selectedTrace]
+  );
+  const viewportCoordinates = useMemo(
+    () => selectedTracePositions.length > 0
+      ? selectedTracePositions
+      : visibleNodes.map(node => [node.latitude, node.longitude] as [number, number]),
+    [selectedTracePositions, visibleNodes]
+  );
 
   if (!topology) {
     return (
@@ -214,8 +249,9 @@ export default function TopologyMapView({
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
+            <MapViewportSync coordinates={viewportCoordinates} />
             {visibleTraces.map(trace => {
-              const positions = tracePositions(trace);
+              const positions = getTracePositions(trace, nodesById);
               if (positions.length < 2) return null;
 
               return (
