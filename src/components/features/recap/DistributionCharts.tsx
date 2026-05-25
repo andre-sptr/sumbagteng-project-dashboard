@@ -94,7 +94,7 @@ export const DistributionCharts = ({
         {pieData.length ? (
           <>
             <div className="w-full" style={{ height: 220 }}>
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={220} minWidth={1}>
                 <PieChart>
                   <Pie
                     data={pieData}
