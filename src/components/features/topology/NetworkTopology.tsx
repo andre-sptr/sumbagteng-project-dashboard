@@ -1,6 +1,7 @@
 // Visual representation of network node hierarchy
 'use client';
 
+import dynamic from 'next/dynamic';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Network,
@@ -15,8 +16,29 @@ import {
   Filter,
   Search,
   X,
+  MapPinned,
+  Rows3,
 } from 'lucide-react';
 import { TopologyHierarchy, OltData, SlotData } from '@/lib/topology';
+import type { TopologyMapContext } from '@/lib/topology-map';
+import { buildTopologyMapContext } from '@/lib/topology-map';
+import type { TopologyLocation } from '@/types/database';
+
+interface NetworkTopologyProps {
+  initialData: TopologyHierarchy | null;
+  initialLocations?: TopologyLocation[];
+}
+
+const TopologyMapView = dynamic(() => import('./TopologyMapView'), {
+  ssr: false,
+  loading: () => (
+    <div className="glass-panel p-8 rounded-3xl border border-gray-200 dark:border-gray-800 min-h-[600px] flex items-center justify-center">
+      <p className="text-xs font-black uppercase tracking-widest text-gray-400">Loading Map Trace...</p>
+    </div>
+  ),
+});
+
+type TopologyViewMode = 'hierarchy' | 'map';
 
 const StatusBadge = ({ status }: { status: string }) => {
   const s = status.toLowerCase();
@@ -173,13 +195,18 @@ function SlotPanel({
   );
 }
 
-export default function NetworkTopology({ initialData }: { initialData: TopologyHierarchy | null }) {
+export default function NetworkTopology({
+  initialData,
+  initialLocations = [],
+}: NetworkTopologyProps) {
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(!initialData);
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({ ROOT: true });
   const [selectedArea, setSelectedArea] = useState<string>('');
   const [selectedSto, setSelectedSto] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [activeView, setActiveView] = useState<TopologyViewMode>('hierarchy');
+  const mapLocations = useMemo(() => initialLocations, [initialLocations]);
 
   const filteredData = useMemo<TopologyHierarchy | null>(() => {
     if (!data) return null;
@@ -205,6 +232,11 @@ export default function NetworkTopology({ initialData }: { initialData: Topology
     }
     return result;
   }, [data, searchQuery]);
+
+  const mapContext = useMemo<TopologyMapContext>(
+    () => buildTopologyMapContext(filteredData, mapLocations, searchQuery),
+    [filteredData, mapLocations, searchQuery]
+  );
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -306,6 +338,34 @@ export default function NetworkTopology({ initialData }: { initialData: Topology
         </div>
 
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 p-1">
+            <button
+              type="button"
+              aria-pressed={activeView === 'hierarchy'}
+              onClick={() => setActiveView('hierarchy')}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                activeView === 'hierarchy'
+                  ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-900 dark:text-blue-400'
+                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+            >
+              <Rows3 size={13} />
+              Hierarchy
+            </button>
+            <button
+              type="button"
+              aria-pressed={activeView === 'map'}
+              onClick={() => setActiveView('map')}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                activeView === 'map'
+                  ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-900 dark:text-blue-400'
+                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+            >
+              <MapPinned size={13} />
+              Map Trace
+            </button>
+          </div>
           <button
             onClick={() => setExpandedNodes({ ROOT: true })}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
@@ -322,142 +382,154 @@ export default function NetworkTopology({ initialData }: { initialData: Topology
         </div>
       </div>
 
-      <div className="glass-panel p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl overflow-hidden min-h-[600px] bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.05),transparent)]">
-        <div className="relative max-w-4xl mx-auto">
-          <div className="flex flex-col items-center">
-            <div className="relative group cursor-pointer">
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-              <div className="relative px-6 py-4 bg-white dark:bg-gray-900 ring-1 ring-gray-900/5 rounded-2xl flex items-center gap-4">
-                <div className="p-3 bg-blue-600 rounded-xl text-white shadow-lg">
-                  <Activity size={24} />
+      {activeView === 'hierarchy' ? (
+        <>
+          <div className="glass-panel p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl overflow-hidden min-h-[600px] bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.05),transparent)]">
+            <div className="relative max-w-4xl mx-auto">
+              <div className="flex flex-col items-center">
+                <div className="relative group cursor-pointer">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                  <div className="relative px-6 py-4 bg-white dark:bg-gray-900 ring-1 ring-gray-900/5 rounded-2xl flex items-center gap-4">
+                    <div className="p-3 bg-blue-600 rounded-xl text-white shadow-lg">
+                      <Activity size={24} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Core Network</h4>
+                      <p className="text-xl font-black text-gray-900 dark:text-white">SUMBAGTENG</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Core Network</h4>
-                  <p className="text-xl font-black text-gray-900 dark:text-white">SUMBAGTENG</p>
+
+                <div className="mt-12 w-full space-y-12">
+                  {searchQuery && Object.keys(filteredData || {}).length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-3">
+                      <Search size={32} className="opacity-30" />
+                      <p className="text-sm font-medium">Tidak ada hasil untuk <span className="font-bold text-gray-600 dark:text-gray-300">&quot;{searchQuery}&quot;</span></p>
+                      <button onClick={() => setSearchQuery('')} className="text-xs text-blue-500 hover:underline">Hapus pencarian</button>
+                    </div>
+                  )}
+                  {Object.keys(filteredData || {})
+                    .filter(a => !selectedArea || a === selectedArea)
+                    .map((area) => (
+                      <div key={area} className="relative pl-8">
+                        <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-blue-500/50 to-transparent" />
+
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="w-4 h-px bg-blue-500/50" />
+                          <div
+                            className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl cursor-pointer hover:scale-105 transition-transform"
+                            onClick={() => toggleNode(`AREA-${area}`)}
+                          >
+                            <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-2">
+                              <Box size={14} /> AREA: {area}
+                              {expandedNodes[`AREA-${area}`] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            </span>
+                          </div>
+                        </div>
+
+                        {expandedNodes[`AREA-${area}`] && Object.keys(filteredData?.[area] || {})
+                          .filter(b => !selectedSto || b === selectedSto)
+                          .map((sto) => (
+                            <div key={sto} className="ml-8 mb-8 relative">
+                              <div className="absolute left-0 top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-800" />
+
+                              <div className="flex items-center gap-3 mb-4">
+                                <div className="w-4 h-px bg-gray-200 dark:bg-gray-800" />
+                                <div
+                                  className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                  onClick={() => toggleNode(`STO-${sto}`)}
+                                >
+                                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                    <Database size={12} /> STO: {sto}
+                                    {expandedNodes[`STO-${sto}`] ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {expandedNodes[`STO-${sto}`] && (Object.values(filteredData?.[area]?.[sto] || {}) as OltData[]).map((olt) => (
+                                <div key={olt.name} className="ml-8 mt-6">
+                                  <div className="flex items-center gap-4">
+                                    <div
+                                      className="relative group cursor-pointer"
+                                      onClick={() => toggleNode(`OLT-${olt.name}`)}
+                                    >
+                                      <div className="absolute -inset-0.5 bg-emerald-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                                      <div className="relative flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 border-2 border-emerald-500/30 rounded-xl shadow-sm">
+                                        <div className="p-2 bg-emerald-500 rounded-lg text-white">
+                                          <Zap size={16} />
+                                        </div>
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">OLT (GPON)</span>
+                                            <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                                              olt.oltType === 'mini'
+                                                ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
+                                                : 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400'
+                                            }`}>
+                                              {olt.oltType === 'mini' ? 'MINI' : 'BIG'}
+                                            </span>
+                                            <StatusBadge status={olt.status} />
+                                          </div>
+                                          <p className="text-xs font-bold text-gray-900 dark:text-white">{olt.name}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-gray-400 ml-3">
+                                          <span className="text-[9px] font-mono">{olt.realizedPorts}/{olt.plannedPorts}p</span>
+                                          {expandedNodes[`OLT-${olt.name}`]
+                                            ? <ChevronDown size={12} />
+                                            : <ChevronRight size={12} />}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex-1 h-px bg-gradient-to-r from-emerald-500/50 to-transparent" />
+                                  </div>
+
+                                  {expandedNodes[`OLT-${olt.name}`] && (
+                                    <SlotPanel
+                                      olt={olt}
+                                      expandedNodes={expandedNodes}
+                                      toggleNode={toggleNode}
+                                    />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                      </div>
+                    ))}
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="mt-12 w-full space-y-12">
-              {searchQuery && Object.keys(filteredData || {}).length === 0 && (
-                <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-3">
-                  <Search size={32} className="opacity-30" />
-                  <p className="text-sm font-medium">Tidak ada hasil untuk <span className="font-bold text-gray-600 dark:text-gray-300">&quot;{searchQuery}&quot;</span></p>
-                  <button onClick={() => setSearchQuery('')} className="text-xs text-blue-500 hover:underline">Hapus pencarian</button>
-                </div>
-              )}
-              {Object.keys(filteredData || {})
-                .filter(a => !selectedArea || a === selectedArea)
-                .map((area) => (
-                  <div key={area} className="relative pl-8">
-                    <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-blue-500/50 to-transparent" />
-
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-4 h-px bg-blue-500/50" />
-                      <div
-                        className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl cursor-pointer hover:scale-105 transition-transform"
-                        onClick={() => toggleNode(`AREA-${area}`)}
-                      >
-                        <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-2">
-                          <Box size={14} /> AREA: {area}
-                          {expandedNodes[`AREA-${area}`] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        </span>
-                      </div>
-                    </div>
-
-                    {expandedNodes[`AREA-${area}`] && Object.keys(filteredData?.[area] || {})
-                      .filter(b => !selectedSto || b === selectedSto)
-                      .map((sto) => (
-                        <div key={sto} className="ml-8 mb-8 relative">
-                          <div className="absolute left-0 top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-800" />
-
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="w-4 h-px bg-gray-200 dark:bg-gray-800" />
-                            <div
-                              className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                              onClick={() => toggleNode(`STO-${sto}`)}
-                            >
-                              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                                <Database size={12} /> STO: {sto}
-                                {expandedNodes[`STO-${sto}`] ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                              </span>
-                            </div>
-                          </div>
-
-                          {expandedNodes[`STO-${sto}`] && (Object.values(filteredData?.[area]?.[sto] || {}) as OltData[]).map((olt) => (
-                            <div key={olt.name} className="ml-8 mt-6">
-                              <div className="flex items-center gap-4">
-                                <div
-                                  className="relative group cursor-pointer"
-                                  onClick={() => toggleNode(`OLT-${olt.name}`)}
-                                >
-                                  <div className="absolute -inset-0.5 bg-emerald-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
-                                  <div className="relative flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 border-2 border-emerald-500/30 rounded-xl shadow-sm">
-                                    <div className="p-2 bg-emerald-500 rounded-lg text-white">
-                                      <Zap size={16} />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">OLT (GPON)</span>
-                                        <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${
-                                          olt.oltType === 'mini'
-                                            ? 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400'
-                                            : 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400'
-                                        }`}>
-                                          {olt.oltType === 'mini' ? 'MINI' : 'BIG'}
-                                        </span>
-                                        <StatusBadge status={olt.status} />
-                                      </div>
-                                      <p className="text-xs font-bold text-gray-900 dark:text-white">{olt.name}</p>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-gray-400 ml-3">
-                                      <span className="text-[9px] font-mono">{olt.realizedPorts}/{olt.plannedPorts}p</span>
-                                      {expandedNodes[`OLT-${olt.name}`]
-                                        ? <ChevronDown size={12} />
-                                        : <ChevronRight size={12} />}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="flex-1 h-px bg-gradient-to-r from-emerald-500/50 to-transparent" />
-                              </div>
-
-                              {expandedNodes[`OLT-${olt.name}`] && (
-                                <SlotPanel
-                                  olt={olt}
-                                  expandedNodes={expandedNodes}
-                                  toggleNode={toggleNode}
-                                />
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                  </div>
-                ))}
+          <div className="flex items-center justify-center gap-8 py-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-800">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-emerald-500" />
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Master Port</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-amber-500" />
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">AANWIJZING Allocation</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-blue-500" />
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Selected (ODC Shown)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-700" />
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Empty Port</span>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-center gap-8 py-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-800">
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-emerald-500" />
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Master Port</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-amber-500" />
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">AANWIJZING Allocation</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-blue-500" />
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Selected (ODC Shown)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-700" />
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Empty Port</span>
-        </div>
-      </div>
+        </>
+      ) : (
+        <TopologyMapView
+          topology={filteredData}
+          mapContext={mapContext}
+          searchQuery={searchQuery}
+          selectedArea={selectedArea}
+          selectedSto={selectedSto}
+        />
+      )}
     </div>
   );
 }

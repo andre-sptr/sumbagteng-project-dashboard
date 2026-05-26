@@ -21,6 +21,7 @@ interface Migration {
 //   16-18 : Phase 6 — Topology allocations & column config
 //   20    : Phase 7 — Drop unused tables (olt_inventory, odc_inventory,
 //                      vendors, notifications)
+//   23    : Phase 8 - Topology map location metadata
 // ============================================================================
 
 const migrations: Migration[] = [
@@ -770,6 +771,34 @@ const migrations: Migration[] = [
         );
         CREATE UNIQUE INDEX IF NOT EXISTS idx_olt_odc_unique_port
           ON olt_odc_map(olt_name, slot, port);
+      `);
+    }
+  },
+  {
+    id: 23,
+    name: 'create_topology_locations',
+    run: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS topology_locations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          entity_type TEXT NOT NULL CHECK (entity_type IN ('core', 'area', 'sto', 'olt', 'odc')),
+          entity_name TEXT NOT NULL,
+          area TEXT NOT NULL DEFAULT '',
+          sto TEXT NOT NULL DEFAULT '',
+          latitude REAL NOT NULL,
+          longitude REAL NOT NULL,
+          source TEXT NOT NULL DEFAULT 'manual',
+          confidence TEXT NOT NULL DEFAULT 'verified' CHECK (confidence IN ('verified', 'estimated')),
+          notes TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(entity_type, entity_name, area, sto)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_topology_locations_entity
+          ON topology_locations(entity_type, entity_name);
+        CREATE INDEX IF NOT EXISTS idx_topology_locations_area_sto
+          ON topology_locations(area, sto);
       `);
     }
   },

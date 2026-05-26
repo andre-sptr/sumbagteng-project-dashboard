@@ -2,12 +2,16 @@
 import NetworkTopology from '@/components/features/topology/NetworkTopology';
 import { getNetworkHierarchy } from '@/lib/topology';
 import { seedOltOdcIfEmpty } from '@/lib/seed-olt-odc';
+import { seedTopologyLocationsIfPresent } from '@/lib/seed-topology-locations';
+import { TopologyLocationRepository } from '@/repositories/TopologyLocationRepository';
 
 export const dynamic = 'force-dynamic';
 
 export default function TopologyPage() {
   seedOltOdcIfEmpty();
+  seedTopologyLocationsIfPresent();
   const data = getNetworkHierarchy();
+  const locations = TopologyLocationRepository.findAll();
 
   return (
     <div className="space-y-6">
@@ -22,7 +26,7 @@ export default function TopologyPage() {
         </div>
       </div>
 
-      <NetworkTopology initialData={data} />
+      <NetworkTopology initialData={data} initialLocations={locations} />
     </div>
   );
 }

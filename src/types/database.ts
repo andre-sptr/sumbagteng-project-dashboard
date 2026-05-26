@@ -176,6 +176,25 @@ export interface TopologyAllocation {
   updated_at: string;
 }
 
+export type TopologyLocationEntityType = 'core' | 'area' | 'sto' | 'olt' | 'odc';
+export type TopologyLocationConfidence = 'verified' | 'estimated';
+
+/** Row from the `topology_locations` table. */
+export interface TopologyLocation {
+  id: number;
+  entity_type: TopologyLocationEntityType;
+  entity_name: string;
+  area: string;
+  sto: string;
+  latitude: number;
+  longitude: number;
+  source: string;
+  confidence: TopologyLocationConfidence;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // ---------------------------------------------------------------------------
 // Supporting Tables
 // ---------------------------------------------------------------------------
