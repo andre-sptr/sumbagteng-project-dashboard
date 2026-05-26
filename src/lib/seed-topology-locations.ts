@@ -25,7 +25,59 @@ interface ResolvedSeedCoordinates {
   longitude: number;
 }
 
-function resolveSeedCoordinates(row: SeedTopologyLocationRow) {
+const VALID_ENTITY_TYPES = new Set<TopologyLocationEntityType>([
+  'core',
+  'area',
+  'sto',
+  'olt',
+  'odc',
+]);
+
+const VALID_CONFIDENCES = new Set<TopologyLocationConfidence>([
+  'verified',
+  'estimated',
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeEntityType(value: unknown): TopologyLocationEntityType | null {
+  if (typeof value !== 'string') return null;
+
+  const normalized = value.trim().toLowerCase();
+  return VALID_ENTITY_TYPES.has(normalized as TopologyLocationEntityType)
+    ? normalized as TopologyLocationEntityType
+    : null;
+}
+
+function normalizeConfidence(value: unknown): TopologyLocationConfidence | null {
+  if (value === undefined) return 'verified';
+  if (typeof value !== 'string') return null;
+
+  const normalized = value.trim().toLowerCase();
+  return VALID_CONFIDENCES.has(normalized as TopologyLocationConfidence)
+    ? normalized as TopologyLocationConfidence
+    : null;
+}
+
+function optionalString(value: unknown): string | null {
+  if (value === undefined) return '';
+  return typeof value === 'string' ? value : null;
+}
+
+function requiredString(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+
+  const normalized = value.trim();
+  return normalized ? normalized : null;
+}
+
+function optionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function resolveSeedCoordinates(row: Pick<SeedTopologyLocationRow, 'latitude' | 'longitude' | 'lat' | 'lng'>) {
   return {
     latitude: row.latitude ?? row.lat,
     longitude: row.longitude ?? row.lng,
@@ -48,21 +100,64 @@ function isValidSeedRow(
     && hasValidSeedCoordinates(coordinates);
 }
 
-export function seedTopologyLocationsFromRows(rows: SeedTopologyLocationRow[]) {
-  for (const row of rows) {
-    const coordinates = resolveSeedCoordinates(row);
-    if (!isValidSeedRow(row, coordinates)) continue;
+function normalizeSeedRow(row: unknown): SeedTopologyLocationRow | null {
+  if (!isRecord(row)) return null;
 
-    TopologyLocationRepository.upsert({
-      entity_type: row.entity_type,
-      entity_name: row.entity_name,
-      area: row.area ?? '',
-      sto: row.sto ?? '',
+  const entityType = normalizeEntityType(row.entity_type);
+  const entityName = requiredString(row.entity_name);
+  const confidence = normalizeConfidence(row.confidence);
+  const area = optionalString(row.area);
+  const sto = optionalString(row.sto);
+  const source = optionalString(row.source);
+  const notes = optionalString(row.notes);
+
+  if (
+    !entityType
+    || !entityName
+    || !confidence
+    || area === null
+    || sto === null
+    || source === null
+    || notes === null
+  ) {
+    return null;
+  }
+
+  return {
+    entity_type: entityType,
+    entity_name: entityName,
+    area,
+    sto,
+    latitude: optionalNumber(row.latitude),
+    longitude: optionalNumber(row.longitude),
+    lat: optionalNumber(row.lat),
+    lng: optionalNumber(row.lng),
+    source: source || undefined,
+    confidence,
+    notes,
+  };
+}
+
+export function seedTopologyLocationsFromRows(rows: unknown) {
+  if (!Array.isArray(rows)) return;
+
+  for (const row of rows) {
+    const seedRow = normalizeSeedRow(row);
+    if (!seedRow) continue;
+
+    const coordinates = resolveSeedCoordinates(seedRow);
+    if (!isValidSeedRow(seedRow, coordinates)) continue;
+
+    TopologyLocationRepository.insertIfMissing({
+      entity_type: seedRow.entity_type,
+      entity_name: seedRow.entity_name,
+      area: seedRow.area ?? '',
+      sto: seedRow.sto ?? '',
       latitude: coordinates.latitude,
       longitude: coordinates.longitude,
-      source: row.source ?? 'seed',
-      confidence: row.confidence ?? 'verified',
-      notes: row.notes ?? '',
+      source: seedRow.source ?? 'seed',
+      confidence: seedRow.confidence ?? 'verified',
+      notes: seedRow.notes ?? '',
     });
   }
 }
@@ -72,6 +167,14 @@ export function seedTopologyLocationsIfPresent() {
   if (!fs.existsSync(filePath)) return;
 
   const raw = fs.readFileSync(filePath, 'utf8');
-  const rows = JSON.parse(raw) as SeedTopologyLocationRow[];
+  if (!raw.trim()) return;
+
+  let rows: unknown;
+  try {
+    rows = JSON.parse(raw);
+  } catch {
+    return;
+  }
+
   seedTopologyLocationsFromRows(rows);
 }

@@ -1,5 +1,7 @@
 import Database from 'better-sqlite3';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import fs from 'fs';
+import path from 'path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initializeSchema } from '../src/lib/schema';
 
 const state = vi.hoisted(() => ({
@@ -335,8 +337,23 @@ describe('buildTopologyMapContext', () => {
 });
 
 describe('seedTopologyLocations', () => {
+  const seedFilePath = path.join(process.cwd(), 'data', 'topology-locations.json');
+  let originalSeedFileContent: string | null = null;
+
   beforeEach(async () => {
     await setupDb();
+    originalSeedFileContent = fs.existsSync(seedFilePath)
+      ? fs.readFileSync(seedFilePath, 'utf8')
+      : null;
+  });
+
+  afterEach(() => {
+    if (originalSeedFileContent === null) {
+      if (fs.existsSync(seedFilePath)) fs.unlinkSync(seedFilePath);
+      return;
+    }
+
+    fs.writeFileSync(seedFilePath, originalSeedFileContent);
   });
 
   it('seeds topology locations from JSON rows', async () => {
@@ -349,7 +366,6 @@ describe('seedTopologyLocations', () => {
         entity_name: 'SUMBAGTENG',
         latitude: -0.9471,
         longitude: 100.4172,
-        source: 'seed',
         confidence: 'verified',
       },
     ]);
@@ -389,6 +405,105 @@ describe('seedTopologyLocations', () => {
         longitude: 100.42,
         source: 'seed',
         confidence: 'verified',
+      },
+    ]);
+  });
+
+  it.each([
+    ['blank', ''],
+    ['malformed', '{ nope'],
+    ['non-array', '{"entity_type":"core"}'],
+  ])('skips %s optional seed file input', async (_caseName, seedContent) => {
+    const { seedTopologyLocationsIfPresent } = await import('../src/lib/seed-topology-locations');
+    const { TopologyLocationRepository } = await import('../src/repositories/TopologyLocationRepository');
+
+    fs.writeFileSync(seedFilePath, seedContent);
+
+    expect(() => seedTopologyLocationsIfPresent()).not.toThrow();
+    expect(TopologyLocationRepository.findAll()).toEqual([]);
+  });
+
+  it('skips structurally invalid seed rows and keeps valid rows', async () => {
+    const { seedTopologyLocationsFromRows } = await import('../src/lib/seed-topology-locations');
+    const { TopologyLocationRepository } = await import('../src/repositories/TopologyLocationRepository');
+
+    seedTopologyLocationsFromRows([
+      null,
+      'not-an-object',
+      {
+        entity_type: 'invalid',
+        entity_name: 'CORE-BAD',
+        latitude: -0.1,
+        longitude: 100.1,
+      },
+      {
+        entity_type: 'core',
+        entity_name: 'CORE-BAD-CONFIDENCE',
+        latitude: -0.2,
+        longitude: 100.2,
+        confidence: 'unknown',
+      },
+      {
+        entity_type: 'core',
+        entity_name: 'CORE-GOOD',
+        latitude: -0.3,
+        longitude: 100.3,
+        confidence: 'estimated',
+      },
+    ]);
+
+    expect(TopologyLocationRepository.findAll()).toMatchObject([
+      {
+        entity_type: 'core',
+        entity_name: 'CORE-GOOD',
+        latitude: -0.3,
+        longitude: 100.3,
+        confidence: 'estimated',
+      },
+    ]);
+  });
+
+  it('does not overwrite an existing manual location when seed data is present', async () => {
+    const { seedTopologyLocationsFromRows } = await import('../src/lib/seed-topology-locations');
+    const { TopologyLocationRepository } = await import('../src/repositories/TopologyLocationRepository');
+
+    TopologyLocationRepository.upsert({
+      entity_type: 'odc',
+      entity_name: 'ODC-AMK-FQ',
+      area: 'AMK',
+      sto: 'AMK-01',
+      latitude: -0.952,
+      longitude: 100.423,
+      source: 'manual',
+      confidence: 'verified',
+      notes: 'Manual field coordinate',
+    });
+
+    seedTopologyLocationsFromRows([
+      {
+        entity_type: 'odc',
+        entity_name: 'ODC-AMK-FQ',
+        area: 'AMK',
+        sto: 'AMK-01',
+        latitude: -0.1,
+        longitude: 100.1,
+        source: 'seed',
+        confidence: 'estimated',
+        notes: 'Seed coordinate',
+      },
+    ]);
+
+    expect(TopologyLocationRepository.findAll()).toMatchObject([
+      {
+        entity_type: 'odc',
+        entity_name: 'ODC-AMK-FQ',
+        area: 'AMK',
+        sto: 'AMK-01',
+        latitude: -0.952,
+        longitude: 100.423,
+        source: 'manual',
+        confidence: 'verified',
+        notes: 'Manual field coordinate',
       },
     ]);
   });

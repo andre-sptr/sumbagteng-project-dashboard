@@ -53,4 +53,25 @@ export class TopologyLocationRepository {
       notes: input.notes ?? '',
     });
   }
+
+  static insertIfMissing(input: TopologyLocationInput): void {
+    db.prepare(`
+      INSERT INTO topology_locations (
+        entity_type, entity_name, area, sto, latitude, longitude, source, confidence, notes, updated_at
+      ) VALUES (
+        @entity_type, @entity_name, @area, @sto, @latitude, @longitude, @source, @confidence, @notes, CURRENT_TIMESTAMP
+      )
+      ON CONFLICT(entity_type, entity_name, area, sto) DO NOTHING
+    `).run({
+      entity_type: input.entity_type,
+      entity_name: input.entity_name,
+      area: input.area ?? '',
+      sto: input.sto ?? '',
+      latitude: input.latitude,
+      longitude: input.longitude,
+      source: input.source ?? 'manual',
+      confidence: input.confidence ?? 'verified',
+      notes: input.notes ?? '',
+    });
+  }
 }
