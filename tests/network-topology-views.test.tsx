@@ -48,13 +48,18 @@ describe('NetworkTopology view modes', () => {
 
     expect(screen.getByText('Core Network')).toBeInTheDocument();
     expect(screen.queryByTestId('topology-map-view')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Collapse All' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Fullscreen Map' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Map Trace' }));
 
     expect(screen.getByTestId('topology-map-view')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Collapse All' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Fullscreen Map' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Hierarchy' }));
 
     expect(screen.getByText('Core Network')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Collapse All' })).toBeInTheDocument();
   });
 });

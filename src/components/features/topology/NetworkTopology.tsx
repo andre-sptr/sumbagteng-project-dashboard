@@ -206,6 +206,7 @@ export default function NetworkTopology({
   const [selectedSto, setSelectedSto] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeView, setActiveView] = useState<TopologyViewMode>('hierarchy');
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const mapLocations = useMemo(() => initialLocations, [initialLocations]);
 
   const filteredData = useMemo<TopologyHierarchy | null>(() => {
@@ -284,23 +285,23 @@ export default function NetworkTopology({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 glass-panel p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 rounded-xl text-white">
+      <div className="glass-panel flex flex-col gap-4 rounded-2xl border border-gray-200 p-4 shadow-xl dark:border-gray-800 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex w-full min-w-0 flex-col gap-3 lg:w-auto lg:flex-row lg:items-center lg:gap-4">
+          <div className="flex w-fit items-center gap-2 rounded-xl bg-blue-600 px-3 py-1.5 text-white">
             <Network size={18} />
             <span className="text-xs font-black uppercase tracking-wider">Network Topology</span>
           </div>
 
           <div className="h-8 w-px bg-gray-200 dark:bg-gray-800 hidden md:block" />
 
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+          <div className="flex w-full min-w-0 items-center gap-2 rounded-xl border border-gray-200 bg-gray-100 px-3 py-1.5 dark:border-gray-700 dark:bg-gray-800 sm:w-auto">
             <Search size={13} className="text-gray-400 shrink-0" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Cari OLT, ODC, STO, Port..."
-              className="bg-transparent border-none text-xs focus:ring-0 outline-none text-gray-700 dark:text-gray-300 placeholder-gray-400 w-44"
+              className="min-w-0 flex-1 border-none bg-transparent text-xs text-gray-700 outline-none placeholder-gray-400 focus:ring-0 dark:text-gray-300 sm:w-56"
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
@@ -311,12 +312,12 @@ export default function NetworkTopology({
 
           <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 hidden md:block" />
 
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <Filter size={16} className="text-gray-400" />
             <select
               value={selectedArea}
               onChange={(e) => { setSelectedArea(e.target.value); setSelectedSto(''); }}
-              className="bg-transparent border-none text-xs font-bold focus:ring-0 cursor-pointer"
+              className="max-w-full cursor-pointer border-none bg-transparent text-xs font-bold focus:ring-0"
             >
               <option value="">ALL AREAS</option>
               {areas.map(a => <option key={a} value={a}>{a}</option>)}
@@ -337,12 +338,15 @@ export default function NetworkTopology({
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 lg:w-auto lg:justify-end">
           <div className="flex items-center gap-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 p-1">
             <button
               type="button"
               aria-pressed={activeView === 'hierarchy'}
-              onClick={() => setActiveView('hierarchy')}
+              onClick={() => {
+                setActiveView('hierarchy');
+                setIsMapFullscreen(false);
+              }}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${
                 activeView === 'hierarchy'
                   ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-900 dark:text-blue-400'
@@ -366,19 +370,26 @@ export default function NetworkTopology({
               Map Trace
             </button>
           </div>
-          <button
-            onClick={() => setExpandedNodes({ ROOT: true })}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
-            title="Collapse All"
-          >
-            <Minimize2 size={18} />
-          </button>
-          <button
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
-            title="Fullscreen"
-          >
-            <Maximize2 size={18} />
-          </button>
+          {activeView === 'hierarchy' && (
+            <button
+              onClick={() => setExpandedNodes({ ROOT: true })}
+              className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+              title="Collapse All"
+              aria-label="Collapse All"
+            >
+              <Minimize2 size={18} />
+            </button>
+          )}
+          {activeView === 'map' && (
+            <button
+              onClick={() => setIsMapFullscreen(value => !value)}
+              className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+              title={isMapFullscreen ? 'Exit Fullscreen Map' : 'Fullscreen Map'}
+              aria-label={isMapFullscreen ? 'Exit Fullscreen Map' : 'Fullscreen Map'}
+            >
+              {isMapFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            </button>
+          )}
         </div>
       </div>
 
@@ -528,6 +539,8 @@ export default function NetworkTopology({
           searchQuery={searchQuery}
           selectedArea={selectedArea}
           selectedSto={selectedSto}
+          isExpanded={isMapFullscreen}
+          onToggleExpanded={() => setIsMapFullscreen(value => !value)}
         />
       )}
     </div>
