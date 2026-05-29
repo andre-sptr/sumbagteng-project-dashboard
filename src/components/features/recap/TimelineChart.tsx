@@ -4,6 +4,7 @@ import { Calendar } from 'lucide-react';
 import {
   BarChart,
   Bar,
+  LabelList,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -41,10 +42,16 @@ export const TimelineChart = ({ goliveMonthList, totalGolivePorts }: TimelineCha
       {goliveMonthList.some(m => m.count > 0) ? (
         <div className="w-full">
           <ResponsiveContainer width="100%" height={350} minWidth={1}>
-            <BarChart data={goliveMonthList}>
+            <BarChart data={goliveMonthList} margin={{ top: 24, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
               <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
-              <YAxis fontSize={10} axisLine={false} tickLine={false} tickFormatter={(v) => v.toLocaleString()} />
+              <YAxis
+                fontSize={10}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => v.toLocaleString()}
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.1)]}
+              />
               <Tooltip
                 cursor={{ fill: 'transparent' }}
                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
@@ -56,7 +63,14 @@ export const TimelineChart = ({ goliveMonthList, totalGolivePorts }: TimelineCha
                 radius={[4, 4, 0, 0]}
                 name="Ports Golive"
                 barSize={40}
-              />
+              >
+                <LabelList
+                  dataKey="count"
+                  position="top"
+                  formatter={formatNumber}
+                  className="fill-gray-700 text-[11px] font-semibold dark:fill-gray-200"
+                />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
