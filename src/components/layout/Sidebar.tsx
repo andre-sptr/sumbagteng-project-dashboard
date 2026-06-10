@@ -20,6 +20,7 @@ import {
   ClipboardCheck,
   TrendingUp,
   Megaphone,
+  FileSearch,
   ChevronDown,
   ChevronRight,
   type LucideIcon,
@@ -66,6 +67,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/report', label: 'Report', icon: BarChart3 },
       { href: '/boq-tracking', label: 'BoQ Tracking', icon: TrendingUp },
+      { href: '/cek-boq', label: 'Cek BOQ', icon: FileSearch },
     ],
   },
   {

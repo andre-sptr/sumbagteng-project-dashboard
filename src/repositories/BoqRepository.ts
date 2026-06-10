@@ -46,6 +46,12 @@ export interface SelisihAanwijzingSummaryRow {
   persen_kenaikan: number;
 }
 
+export interface CheckBoqDbRow {
+  designator: string;
+  volume: number;
+  total: number;
+}
+
 export class BoqRepository {
   static findAll(): Boq[] {
     return db.prepare('SELECT * FROM boq ORDER BY created_at DESC').all() as Boq[];
@@ -296,5 +302,35 @@ export class BoqRepository {
         persen_kenaikan,
       };
     });
+  }
+
+  /**
+   * Check whether BOQ items exist for a given project (by id_ihld)
+   * in the specified source table.
+   */
+  static hasBoqItems(idIhld: string, source: 'ut' | 'aanwijzing'): boolean {
+    const table = source === 'ut' ? 'boq_ut_items' : 'boq_aanwijzing_items';
+    const row = db.prepare(
+      `SELECT 1 FROM ${table} WHERE id_ihld = ? AND is_section = 0 AND TRIM(designator) != '' LIMIT 1`
+    ).get(idIhld) as { '1': number } | undefined;
+    return row !== undefined;
+  }
+
+  /**
+   * Get aggregated designator-level BOQ data for a project from
+   * either boq_ut_items or boq_aanwijzing_items.
+   * Returns volume and cost summed per designator.
+   */
+  static getItemsByProject(idIhld: string, source: 'ut' | 'aanwijzing'): CheckBoqDbRow[] {
+    const table = source === 'ut' ? 'boq_ut_items' : 'boq_aanwijzing_items';
+    return db.prepare(`
+      SELECT designator,
+             SUM(volume) AS volume,
+             SUM(total)  AS total
+      FROM ${table}
+      WHERE id_ihld = ? AND is_section = 0 AND TRIM(designator) != ''
+      GROUP BY designator
+      ORDER BY MIN(no) ASC, designator ASC
+    `).all(idIhld) as CheckBoqDbRow[];
   }
 }
