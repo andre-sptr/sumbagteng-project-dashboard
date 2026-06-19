@@ -1,8 +1,10 @@
 // User Testing (UT) data entry and management page
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { ChevronDown, Save, Trash2, Edit3, Plus, X, FileText, ChevronLeft, ChevronRight, Upload, Loader2, Eye } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ChevronDown, Save, Trash2, Edit3, Plus, X, FileText, ChevronLeft, ChevronRight, Upload, Loader2, Eye, Search } from 'lucide-react';
+import { findDuplicateByIdIhld } from '@/lib/duplicate-check';
+import { useConfirm } from '@/hooks/useConfirm';
 import BoqPreviewTable from '@/components/features/boq/BoqPreviewTable';
 
 interface ProjectOption {
@@ -73,6 +75,8 @@ export default function UTPage() {
 
   const [searchLop, setSearchLop] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const { confirm } = useConfirm();
+  const [search, setSearch] = useState('');
 
   const filteredProjects = projects.filter(p =>
     p.nama_lop.toLowerCase().includes(searchLop.toLowerCase()) ||
@@ -202,6 +206,21 @@ export default function UTPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const existing = findDuplicateByIdIhld(utList, formData.id_ihld, editingId);
+    let overwriteId: string | null = editingId;
+    if (existing) {
+      const ok = await confirm({
+        title: 'Project sudah ada',
+        message: `Project "${formData.nama_lop}" (ID IHLD: ${formData.id_ihld}) sudah memiliki data UT. Timpa data yang lama?`,
+        confirmLabel: 'Timpa',
+        cancelLabel: 'Batal',
+        variant: 'warning',
+      });
+      if (!ok) return;
+      overwriteId = existing.id ?? null;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -216,7 +235,7 @@ export default function UTPage() {
           jumlah_port: Number(formData.jumlah_port) || 0,
           jumlah_temuan: Number(temuanData.jumlah_temuan) || 0,
           boq_data: boqRows.length > 0 ? boqRows : null,
-          id: editingId ?? undefined,
+          id: overwriteId ?? undefined,
         }),
       });
 
@@ -276,7 +295,7 @@ export default function UTPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Yakin ingin menghapus data ini?')) return;
+    if (!window.confirm('Yakin ingin menghapus data ini?')) return;
 
     try {
       const res = await fetch(`/api/ut?id=${id}`, { method: 'DELETE' });
@@ -316,8 +335,24 @@ export default function UTPage() {
     setEditingId(null);
   };
 
-  const totalPages = Math.ceil(utList.length / ITEMS_PER_PAGE);
-  const paginatedData = utList.slice(
+  const filteredUtList = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) return utList;
+    return utList.filter((u) =>
+      (u.id_ihld || '').toLowerCase().includes(keyword) ||
+      (u.nama_lop || '').toLowerCase().includes(keyword)
+    );
+  }, [utList, search]);
+
+  // Reset to the first page when the search keyword changes (render-time adjustment, no effect).
+  const [prevSearch, setPrevSearch] = useState(search);
+  if (search !== prevSearch) {
+    setPrevSearch(search);
+    setCurrentPage(1);
+  }
+
+  const totalPages = Math.ceil(filteredUtList.length / ITEMS_PER_PAGE);
+  const paginatedData = filteredUtList.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
@@ -694,6 +729,24 @@ export default function UTPage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {utList.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {filteredUtList.length} dari {utList.length} data
+          </p>
+          <div className="relative w-full sm:w-80">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari ID IHLD atau Nama LOP..."
+              className="w-full h-10 pl-9 pr-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
         </div>
       )}
 
