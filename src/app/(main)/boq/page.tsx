@@ -1,9 +1,11 @@
 // Bill of Quantity management and Excel import page
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Upload, Trash2, FileText, ChevronLeft, ChevronRight, X, Loader2, Eye, Plus, Save, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Upload, Trash2, FileText, ChevronLeft, ChevronRight, X, Loader2, Eye, Plus, Save, ChevronDown, Search } from 'lucide-react';
 import { normalizeBoqItems } from '@/lib/boq-items';
+import { findDuplicateByIdIhld } from '@/lib/duplicate-check';
+import { useConfirm } from '@/hooks/useConfirm';
 
 interface ProjectOption {
   nama_lop: string;
@@ -67,6 +69,8 @@ export default function BoqPage() {
   });
   const [searchLop, setSearchLop] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const { confirm } = useConfirm();
+  const [search, setSearch] = useState('');
 
 
 
@@ -128,6 +132,18 @@ export default function BoqPage() {
       return;
     }
 
+    const existing = findDuplicateByIdIhld(boqList, formData.id_ihld);
+    if (existing) {
+      const ok = await confirm({
+        title: 'Project sudah ada',
+        message: `Project "${formData.nama_lop}" (ID IHLD: ${formData.id_ihld}) sudah memiliki data BoQ Plan. Timpa data yang lama?`,
+        confirmLabel: 'Timpa',
+        cancelLabel: 'Batal',
+        variant: 'warning',
+      });
+      if (!ok) return;
+    }
+
     setIsUploading(true);
 
     try {
@@ -170,7 +186,7 @@ export default function BoqPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Yakin ingin menghapus data ini?')) return;
+    if (!window.confirm('Yakin ingin menghapus data ini?')) return;
 
     try {
       const res = await fetch(`/api/boq?id=${id}`, { method: 'DELETE' });
@@ -320,8 +336,26 @@ export default function BoqPage() {
     p.id_ihld.toLowerCase().includes(searchLop.toLowerCase())
   );
 
-  const totalPages = Math.ceil(boqList.length / ITEMS_PER_PAGE);
-  const paginatedData = boqList.slice(
+  const filteredBoqList = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) return boqList;
+    return boqList.filter((b) =>
+      (b.id_ihld || '').toLowerCase().includes(keyword) ||
+      (b.nama_lop || '').toLowerCase().includes(keyword) ||
+      (b.project_name || '').toLowerCase().includes(keyword)
+    );
+  }, [boqList, search]);
+
+  // Reset to the first page when the search keyword changes.
+  // Adjusting state during render avoids the extra render pass an effect would cause.
+  const [prevSearch, setPrevSearch] = useState(search);
+  if (search !== prevSearch) {
+    setPrevSearch(search);
+    setCurrentPage(1);
+  }
+
+  const totalPages = Math.ceil(filteredBoqList.length / ITEMS_PER_PAGE);
+  const paginatedData = filteredBoqList.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
@@ -492,6 +526,24 @@ export default function BoqPage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {boqList.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {filteredBoqList.length} dari {boqList.length} data
+          </p>
+          <div className="relative w-full sm:w-80">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari ID IHLD atau Nama LOP..."
+              className="w-full h-10 pl-9 pr-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
         </div>
       )}
 
